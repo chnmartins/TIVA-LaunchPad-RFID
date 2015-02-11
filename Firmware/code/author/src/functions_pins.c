@@ -23,12 +23,15 @@
 #include "functions_pins.h"
 #include "conf.h"
 #include "gpio.h"
+#include "hw_gpio.h"
+#include "hw_types.h"
 #include "hw_memmap.h"
 #include "sysctl.h"
 
 /* Private typedef -----------------------------------------------------------*/
 
 /* Private define ------------------------------------------------------------*/
+#define	GPIO_UNLOCK_VALUE	(0x4C4F434B)
 
 /* Private macro -------------------------------------------------------------*/
 #define	ASSERT_GPIO_PORT_BASE(x)	((x) == GPIO_PORTA_BASE || \
@@ -69,13 +72,13 @@
  * Function that returns the SysCtl memory mapped register for the port specified.
  */
 
-uint32_t fPins_getGpioSysCtl (const uint32_t GPIO_PORTx_BASE)
+uint32_t fPins_getGpioSysCtl (fPins_Pin* const Gpio_Pin)
 {
 #ifdef	DEBUG
-	ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(GPIO_PORTx_BASE));
+	ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->GPIO_PORTx_BASE));
 #endif
 
-	switch (GPIO_PORTx_BASE)
+	switch (Gpio_Pin->GPIO_PORTx_BASE)
 	{
 	case GPIO_PORTA_BASE:
 		return SYSCTL_PERIPH_GPIOA;
@@ -122,13 +125,13 @@ uint32_t fPins_getGpioSysCtl (const uint32_t GPIO_PORTx_BASE)
  * Function that returns the GPIO interrupt pin for the pin specified.
  */
 
-uint32_t fPins_getGpioIntPin (const uint32_t GPIO_PIN_x)
+uint32_t fPins_getGpioIntPin (fPins_Pin* const Gpio_Pin)
 {
 #ifdef	DEBUG
-	ASSERT_PARAM(ASSERT_GPIO_PIN(GPIO_PIN_x));
+	ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->GPIO_PIN_x));
 #endif
 
-	switch (GPIO_PIN_x)
+	switch (Gpio_Pin->GPIO_PIN_x)
 	{
 	case GPIO_PIN_0:
 		return GPIO_INT_PIN_0;
@@ -149,5 +152,20 @@ uint32_t fPins_getGpioIntPin (const uint32_t GPIO_PIN_x)
 	default:
 		return (uint32_t) 0;
 	}
+}
+
+/*
+ * Function to unlock the specified GPIO pin on the specified port.
+ */
+
+void fPins_unlockGpioPin (fPins_Pin* const Gpio_Pin)
+{
+#ifdef	DEBUG
+	ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->GPIO_PORTx_BASE));
+	ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->GPIO_PIN_x));
+#endif
+
+	HWREG(Gpio_Pin->GPIO_PORTx_BASE + GPIO_O_LOCK) = GPIO_UNLOCK_VALUE;
+	HWREG(Gpio_Pin->GPIO_PORTx_BASE + GPIO_O_CR) |= Gpio_Pin->GPIO_PIN_x;
 }
 

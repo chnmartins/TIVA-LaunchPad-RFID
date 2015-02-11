@@ -25,14 +25,20 @@
 #include <stdint.h>
 
 /* Exported types ------------------------------------------------------------*/
+typedef struct
+{
+	uint32_t	GPIO_PIN_x;
+	uint32_t	GPIO_PORTx_BASE;
+} fPins_Pin;
 
 /* Exported constants --------------------------------------------------------*/
 
 /* Exported macro ------------------------------------------------------------*/
 
 /* Exported functions --------------------------------------------------------*/
-uint32_t fPins_getGpioSysCtl (const uint32_t GPIO_PORTx_BASE);
-uint32_t fPins_getGpioIntPin (const uint32_t GPIO_PIN_x);
+uint32_t fPins_getGpioSysCtl (fPins_Pin* const Gpio_Pin);
+uint32_t fPins_getGpioIntPin (fPins_Pin* const Gpio_Pin);
+void fPins_unlockGpioPin (fPins_Pin* const Gpio_Pin);
 
 #ifdef __cplusplus
 }
