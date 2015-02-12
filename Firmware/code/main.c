@@ -18,6 +18,12 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
+#include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include "conf.h"
+#include "ektm4c123gxl_pinout.h"
+#include "functions_pins.h"
 
 /* Private typedef -----------------------------------------------------------*/
 
@@ -30,6 +36,16 @@
 /* Private function prototypes -----------------------------------------------*/
 
 /* Private functions ---------------------------------------------------------*/
+
+void assert_failed (char* file, uint32_t line)
+{
+    printf("> ASSERT FAILED: Wrong parameter at file %s on line %i.\n", file, line);
+
+    while (1)
+    {
+
+    }
+}
 
 int main (void)
 {

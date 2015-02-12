@@ -14,36 +14,34 @@
   */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __CONF_H
-#define __CONF_H
+#ifndef __EKTM4C123GXL_PINOUT_H
+#define __EKTM4C123GXL_PINOUT_H
 
 #ifdef __cplusplus
  extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include <stdio.h>
+#include "gpio.h"
+#include "hw_memmap.h"
 
 /* Exported types ------------------------------------------------------------*/
 
 /* Exported constants --------------------------------------------------------*/
-#define	USE_FULL_ASSERT	1
-#define	DEBUG			1
+#define LEDR_PIN     GPIO_PIN_1
+#define LEDR_PORT    GPIO_PORTF_BASE
+#define LEDB_PIN     GPIO_PIN_2
+#define LEDB_PORT    GPIO_PORTF_BASE
+#define LEDG_PIN     GPIO_PIN_3
+#define LEDG_PORT    GPIO_PORTF_BASE
 
 /* Exported macro ------------------------------------------------------------*/
-#ifdef	USE_FULL_ASSERT
-#	define	ASSERT_PARAM(x)		( (x) ? (void)0 : assert_failed(__FILE__, __LINE__) )
-#else
-#	define	ASSERT_PARAM(x)		( (void)0 )
-#endif
 
 /* Exported functions --------------------------------------------------------*/
-
-void assert_failed (char* file, uint32_t line);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /*__CONF_H */
+#endif /*__EKTM4C123GXL_PINOUT_H */
  

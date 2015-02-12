@@ -23,12 +23,16 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
+#include <stdbool.h>
 
 /* Exported types ------------------------------------------------------------*/
 typedef struct
 {
-	uint32_t	GPIO_PIN_x;
-	uint32_t	GPIO_PORTx_BASE;
+	uint32_t	GPIO_Pin;
+	uint32_t	GPIO_Port;
+	uint32_t    GPIO_Direction;
+	uint32_t	GPIO_Current;
+	uint32_t	GPIO_Type;
 } fPins_Pin;
 
 /* Exported constants --------------------------------------------------------*/
@@ -36,9 +40,15 @@ typedef struct
 /* Exported macro ------------------------------------------------------------*/
 
 /* Exported functions --------------------------------------------------------*/
-uint32_t fPins_getGpioSysCtl (fPins_Pin* const Gpio_Pin);
+void fPins_enableGpioSysCtl (fPins_Pin* const Gpio_Pin);
 uint32_t fPins_getGpioIntPin (fPins_Pin* const Gpio_Pin);
 void fPins_unlockGpioPin (fPins_Pin* const Gpio_Pin);
+void fPins_setGpioConfig (fPins_Pin* const Gpio_Pin);
+void fPins_setGpioDirection (fPins_Pin* const Gpio_Pin);
+void fPins_setGpioToggle (fPins_Pin* const Gpio_Pin);
+void fPins_setGpioLow (fPins_Pin* const Gpio_Pin);
+void fPins_setGpioHigh (fPins_Pin* const Gpio_Pin);
+bool fPins_getGpioLevel (fPins_Pin* const Gpio_Pin);
 
 #ifdef __cplusplus
 }
