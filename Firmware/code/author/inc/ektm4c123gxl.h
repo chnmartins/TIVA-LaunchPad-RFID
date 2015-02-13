@@ -22,22 +22,24 @@
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "gpio.h"
-#include "hw_memmap.h"
+#include <stdint.h>
 
 /* Exported types ------------------------------------------------------------*/
 
 /* Exported constants --------------------------------------------------------*/
-#define LEDR_PIN     GPIO_PIN_1
-#define LEDR_PORT    GPIO_PORTF_BASE
-#define LEDB_PIN     GPIO_PIN_2
-#define LEDB_PORT    GPIO_PORTF_BASE
-#define LEDG_PIN     GPIO_PIN_3
-#define LEDG_PORT    GPIO_PORTF_BASE
+#define LEDR    0x01
+#define LEDG    0x02
+#define LEDB    0x04
+
+#define LED_ON      0x01
+#define LED_OFF     0x02
+#define LED_TOGGLE  0x03
 
 /* Exported macro ------------------------------------------------------------*/
 
 /* Exported functions --------------------------------------------------------*/
+ void brd_LedInit (uint8_t LEDx);
+void brd_LedInteract (uint8_t LEDx, uint8_t interact);
 
 #ifdef __cplusplus
 }

@@ -72,7 +72,7 @@
 									 (x) == GPIO_PIN_TYPE_WAKE_HIGH || \
 									 (x) == GPIO_PIN_TYPE_WAKE_LOW)
 
-#define	ASSERT_GPIO_CURRENT(x)		((x) == GPIO_STRENGTH_2MA || \
+#define	ASSERT_CURRENT(x)		((x) == GPIO_STRENGTH_2MA || \
 									 (x) == GPIO_STRENGTH_4MA || \
 									 (x) == GPIO_STRENGTH_6MA || \
 									 (x) == GPIO_STRENGTH_8MA || \
@@ -96,10 +96,10 @@
 void fPins_enableGpioSysCtl (fPins_Pin* const Gpio_Pin)
 {
 #ifdef	DEBUG
-	ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->GPIO_Port));
+	ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
 #endif
 
-	switch (Gpio_Pin->GPIO_Port)
+	switch (Gpio_Pin->Port)
 	{
 	case GPIO_PORTA_BASE:
 		SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
@@ -167,10 +167,10 @@ void fPins_enableGpioSysCtl (fPins_Pin* const Gpio_Pin)
 uint32_t fPins_getGpioIntPin (fPins_Pin* const Gpio_Pin)
 {
 #ifdef	DEBUG
-	ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->GPIO_Pin));
+	ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->Pin));
 #endif
 
-	switch (Gpio_Pin->GPIO_Pin)
+	switch (Gpio_Pin->Pin)
 	{
 	case GPIO_PIN_0:
 		return GPIO_INT_PIN_0;
@@ -200,12 +200,12 @@ uint32_t fPins_getGpioIntPin (fPins_Pin* const Gpio_Pin)
 void fPins_unlockGpioPin (fPins_Pin* const Gpio_Pin)
 {
 #ifdef	DEBUG
-	ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->GPIO_Port));
-	ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->GPIO_Pin));
+	ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
+	ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->Pin));
 #endif
 
-	HWREG(Gpio_Pin->GPIO_Port + GPIO_O_LOCK) = GPIO_UNLOCK_VALUE;
-	HWREG(Gpio_Pin->GPIO_Port + GPIO_O_CR) |= Gpio_Pin->GPIO_Pin;
+	HWREG(Gpio_Pin->Port + GPIO_O_LOCK) = GPIO_UNLOCK_VALUE;
+	HWREG(Gpio_Pin->Port + GPIO_O_CR) |= Gpio_Pin->Pin;
 }
 
 /*
@@ -215,13 +215,13 @@ void fPins_unlockGpioPin (fPins_Pin* const Gpio_Pin)
 void fPins_setGpioConfig (fPins_Pin* const Gpio_Pin)
 {
 #ifdef	DEBUG
-	ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->GPIO_Port));
-	ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->GPIO_Pin));
-	ASSERT_PARAM(ASSERT_GPIO_CURRENT(Gpio_Pin->GPIO_Current));
-	ASSERT_PARAM(ASSERT_GPIO_TYPE(Gpio_Pin->GPIO_Type));
+	ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
+	ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->Pin));
+	ASSERT_PARAM(ASSERT_CURRENT(Gpio_Pin->Current));
+	ASSERT_PARAM(ASSERT_GPIO_TYPE(Gpio_Pin->Type));
 #endif
 
-	GPIOPadConfigSet(Gpio_Pin->GPIO_Port, Gpio_Pin->GPIO_Pin, Gpio_Pin->GPIO_Current, Gpio_Pin->GPIO_Type);
+	GPIOPadConfigSet(Gpio_Pin->Port, Gpio_Pin->Pin, Gpio_Pin->Current, Gpio_Pin->Type);
 }
 
 /*
@@ -231,12 +231,12 @@ void fPins_setGpioConfig (fPins_Pin* const Gpio_Pin)
 void fPins_setGpioDirection (fPins_Pin* const Gpio_Pin)
 {
 #ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->GPIO_Port));
-    ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->GPIO_Pin));
-    ASSERT_PARAM(ASSERT_GPIO_DIRECTION(Gpio_Pin->GPIO_Direction));
+    ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
+    ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->Pin));
+    ASSERT_PARAM(ASSERT_GPIO_DIRECTION(Gpio_Pin->Direction));
 #endif
 
-    GPIODirModeSet(Gpio_Pin->GPIO_Port, Gpio_Pin->GPIO_Pin, Gpio_Pin->GPIO_Direction);
+    GPIODirModeSet(Gpio_Pin->Port, Gpio_Pin->Pin, Gpio_Pin->Direction);
 }
 
 /*
@@ -246,11 +246,11 @@ void fPins_setGpioDirection (fPins_Pin* const Gpio_Pin)
 void fPins_setGpioHigh (fPins_Pin* const Gpio_Pin)
 {
 #ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->GPIO_Port));
-    ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->GPIO_Pin));
+    ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
+    ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->Pin));
 #endif
 
-    GPIOPinWrite(Gpio_Pin->GPIO_Port, Gpio_Pin->GPIO_Pin, Gpio_Pin->GPIO_Pin);
+    GPIOPinWrite(Gpio_Pin->Port, Gpio_Pin->Pin, Gpio_Pin->Pin);
 }
 
 /*
@@ -260,11 +260,11 @@ void fPins_setGpioHigh (fPins_Pin* const Gpio_Pin)
 void fPins_setGpioLow (fPins_Pin* const Gpio_Pin)
 {
 #ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->GPIO_Port));
-    ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->GPIO_Pin));
+    ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
+    ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->Pin));
 #endif
 
-    GPIOPinWrite(Gpio_Pin->GPIO_Port, Gpio_Pin->GPIO_Pin, ~(Gpio_Pin->GPIO_Pin));
+    GPIOPinWrite(Gpio_Pin->Port, Gpio_Pin->Pin, ~(Gpio_Pin->Pin));
 }
 
 /*
@@ -274,14 +274,14 @@ void fPins_setGpioLow (fPins_Pin* const Gpio_Pin)
 void fPins_setGpioToggle (fPins_Pin* const Gpio_Pin)
 {
 #ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->GPIO_Port));
-    ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->GPIO_Pin));
+    ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
+    ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->Pin));
 #endif
 
     if (fPins_getGpioLevel(Gpio_Pin))
-        GPIOPinWrite(Gpio_Pin->GPIO_Port, Gpio_Pin->GPIO_Pin, ~Gpio_Pin->GPIO_Pin);
+        GPIOPinWrite(Gpio_Pin->Port, Gpio_Pin->Pin, ~Gpio_Pin->Pin);
     else
-        GPIOPinWrite(Gpio_Pin->GPIO_Port, Gpio_Pin->GPIO_Pin, Gpio_Pin->GPIO_Pin);
+        GPIOPinWrite(Gpio_Pin->Port, Gpio_Pin->Pin, Gpio_Pin->Pin);
 }
 
 /*
@@ -291,12 +291,24 @@ void fPins_setGpioToggle (fPins_Pin* const Gpio_Pin)
 bool fPins_getGpioLevel (fPins_Pin* const Gpio_Pin)
 {
 #ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->GPIO_Port));
-    ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->GPIO_Pin));
+    ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
+    ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->Pin));
 #endif
 
-    if (GPIOPinRead(Gpio_Pin->GPIO_Port, Gpio_Pin->GPIO_Pin))
+    if (GPIOPinRead(Gpio_Pin->Port, Gpio_Pin->Pin))
         return true;
 
     return false;
+}
+
+/*
+ * Completely initializes a pin.
+ */
+
+void fPins_InitGpioPin (fPins_Pin* const Gpio_Pin)
+{
+    fPins_enableGpioSysCtl(Gpio_Pin);
+    fPins_unlockGpioPin(Gpio_Pin);
+    fPins_setGpioDirection(Gpio_Pin);
+    fPins_setGpioConfig(Gpio_Pin);
 }

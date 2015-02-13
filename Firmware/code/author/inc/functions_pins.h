@@ -24,18 +24,67 @@
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
 #include <stdbool.h>
+#include "gpio.h"
+#include "hw_memmap.h"
 
 /* Exported types ------------------------------------------------------------*/
 typedef struct
 {
-	uint32_t	GPIO_Pin;
-	uint32_t	GPIO_Port;
-	uint32_t    GPIO_Direction;
-	uint32_t	GPIO_Current;
-	uint32_t	GPIO_Type;
+	uint32_t	Pin;
+	uint32_t	Port;
+	uint32_t    Direction;
+	uint32_t	Current;
+	uint32_t	Type;
 } fPins_Pin;
 
 /* Exported constants --------------------------------------------------------*/
+#define PIN_0   GPIO_PIN_0
+#define PIN_1   GPIO_PIN_1
+#define PIN_2   GPIO_PIN_2
+#define PIN_3   GPIO_PIN_3
+#define PIN_4   GPIO_PIN_4
+#define PIN_5   GPIO_PIN_5
+#define PIN_6   GPIO_PIN_6
+#define PIN_7   GPIO_PIN_7
+
+#define PORT_A  GPIO_PORTA_BASE
+#define PORT_B  GPIO_PORTB_BASE
+#define PORT_C  GPIO_PORTC_BASE
+#define PORT_D  GPIO_PORTD_BASE
+#define PORT_E  GPIO_PORTE_BASE
+#define PORT_F  GPIO_PORTF_BASE
+#define PORT_G  GPIO_PORTG_BASE
+#define PORT_H  GPIO_PORTH_BASE
+#define PORT_J  GPIO_PORTJ_BASE
+#define PORT_K  GPIO_PORTK_BASE
+#define PORT_L  GPIO_PORTL_BASE
+#define PORT_M  GPIO_PORTM_BASE
+#define PORT_N  GPIO_PORTN_BASE
+#define PORT_P  GPIO_PORTP_BASE
+#define PORT_Q  GPIO_PORTQ_BASE
+#define PORT_R  GPIO_PORTR_BASE
+#define PORT_S  GPIO_PORTS_BASE
+#define PORT_T  GPIO_PORTT_BASE
+
+#define DIR_IN  GPIO_DIR_MODE_IN
+#define DIR_OUT GPIO_DIR_MODE_OUT
+#define DIR_HW  GPIO_DIR_MODE_HW
+
+#define CURR_2MA        GPIO_STRENGTH_2MA
+#define CURR_4MA        GPIO_STRENGTH_4MA
+#define CURR_6MA        GPIO_STRENGTH_6MA
+#define CURR_8MA        GPIO_STRENGTH_8MA
+#define CURR_8MA_SC     GPIO_STRENGTH_8MA_SC
+#define CURR_10MA       GPIO_STRENGTH_10MA
+#define CURR_12MA       GPIO_STRENGTH_12MA
+
+#define TYPE_PP         GPIO_PIN_TYPE_STD
+#define TYPE_PP_PU      GPIO_PIN_TYPE_STD_WPU
+#define TYPE_PP_PD      GPIO_PIN_TYPE_STD_WPD
+#define TYPE_OD         GPIO_PIN_TYPE_OD
+#define TYPE_ANALOG     GPIO_PIN_TYPE_ANALOG
+#define TYPE_WAKE_HIGH  GPIO_PIN_TYPE_WAKE_HIGH
+#define TYPE_WAKE_LOW   GPIO_PIN_TYPE_WAKE_LOW
 
 /* Exported macro ------------------------------------------------------------*/
 
@@ -49,6 +98,7 @@ void fPins_setGpioToggle (fPins_Pin* const Gpio_Pin);
 void fPins_setGpioLow (fPins_Pin* const Gpio_Pin);
 void fPins_setGpioHigh (fPins_Pin* const Gpio_Pin);
 bool fPins_getGpioLevel (fPins_Pin* const Gpio_Pin);
+void fPins_InitGpioPin (fPins_Pin* const Gpio_Pin);
 
 #ifdef __cplusplus
 }
