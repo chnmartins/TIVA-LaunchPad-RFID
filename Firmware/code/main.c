@@ -22,8 +22,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "conf.h"
-#include "ektm4c123gxl_pinout.h"
-#include "functions_pins.h"
+#include "ektm4c123gxl.h"
 
 /* Private typedef -----------------------------------------------------------*/
 
@@ -49,9 +48,16 @@ void assert_failed (char* file, uint32_t line)
 
 int main (void)
 {
+    brd_LedInit(LEDG | LEDR | LEDB);
+    brd_PushButtonInit(PB1);
+
+    brd_LedInteract(LEDG | LEDR | LEDB, LED_OFF);
 
 	while (1)
 	{
-
+	    if (brd_PushButtonRead(PB1))
+	        brd_LedInteract(LEDG, LED_ON);
+	    else
+	        brd_LedInteract(LEDG, LED_OFF);
 	}
 }

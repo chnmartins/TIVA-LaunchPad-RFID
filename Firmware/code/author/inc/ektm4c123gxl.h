@@ -35,11 +35,19 @@
 #define LED_OFF     0x02
 #define LED_TOGGLE  0x03
 
+#define PB1     0x01
+#define PB2     0x02
+
+#define PB1_ON  0x01
+#define PB2_ON  0x02
+
 /* Exported macro ------------------------------------------------------------*/
 
 /* Exported functions --------------------------------------------------------*/
- void brd_LedInit (uint8_t LEDx);
+void brd_LedInit (uint8_t LEDx);
 void brd_LedInteract (uint8_t LEDx, uint8_t interact);
+void brd_PushButtonInit (uint8_t PBx);
+uint8_t brd_PushButtonRead (uint8_t PBx);
 
 #ifdef __cplusplus
 }
