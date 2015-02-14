@@ -18,6 +18,11 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
+#include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include "conf.h"
+#include "ektm4c123gxl.h"
 
 /* Private typedef -----------------------------------------------------------*/
 
@@ -31,8 +36,37 @@
 
 /* Private functions ---------------------------------------------------------*/
 
+void assert_failed (char* file, uint32_t line)
+{
+    printf("> ASSERT FAILED: Wrong parameter at file %s on line %i.\n", file, line);
+
+    while (1)
+    {
+
+    }
+}
+
+void IRQHandler (void)
+{
+    uint8_t val = brd_PushButtonGetInt(PB1 | PB2);
+
+    if (val & PB1)
+    {
+        brd_LedInteract(LEDR, LED_ON);
+    }
+    if (val & PB2)
+    {
+        brd_LedInteract(LEDR, LED_OFF);
+    }
+}
+
 int main (void)
 {
+    brd_LedInit(LEDG | LEDR | LEDB);
+    brd_PushButtonInit(PB1 | PB2);
+    brd_PushButtonInitInt(PB1 | PB2, IRQHandler);
+
+    brd_LedInteract(LEDG | LEDR | LEDB, LED_OFF);
 
 	while (1)
 	{

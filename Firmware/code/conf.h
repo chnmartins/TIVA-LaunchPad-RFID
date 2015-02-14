@@ -39,15 +39,7 @@
 
 /* Exported functions --------------------------------------------------------*/
 
-void assert_failed (char* file, uint8_t line)
-{
-	printf("> ASSERT FAILED: Wrong parameter at file %s on line %i.\n", file, line);
-
-	while (1)
-	{
-
-	}
-}
+void assert_failed (char* file, uint32_t line);
 
 #ifdef __cplusplus
 }

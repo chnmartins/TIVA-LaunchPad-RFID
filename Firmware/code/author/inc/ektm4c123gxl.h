@@ -14,8 +14,8 @@
   */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __FUNCTIONS_PINS_H
-#define __FUNCTIONS_PINS_H
+#ifndef __EKTM4C123GXL_PINOUT_H
+#define __EKTM4C123GXL_PINOUT_H
 
 #ifdef __cplusplus
  extern "C" {
@@ -25,24 +25,35 @@
 #include <stdint.h>
 
 /* Exported types ------------------------------------------------------------*/
-typedef struct
-{
-	uint32_t	GPIO_PIN_x;
-	uint32_t	GPIO_PORTx_BASE;
-} fPins_Pin;
 
 /* Exported constants --------------------------------------------------------*/
+#define LEDR    0x01
+#define LEDG    0x02
+#define LEDB    0x04
+
+#define LED_ON      0x01
+#define LED_OFF     0x02
+#define LED_TOGGLE  0x03
+
+#define PB1     0x01
+#define PB2     0x02
+
+#define PB1_ON  0x01
+#define PB2_ON  0x02
 
 /* Exported macro ------------------------------------------------------------*/
 
 /* Exported functions --------------------------------------------------------*/
-uint32_t fPins_getGpioSysCtl (fPins_Pin* const Gpio_Pin);
-uint32_t fPins_getGpioIntPin (fPins_Pin* const Gpio_Pin);
-void fPins_unlockGpioPin (fPins_Pin* const Gpio_Pin);
+void brd_LedInit (uint8_t LEDx);
+void brd_LedInteract (uint8_t LEDx, uint8_t interact);
+void brd_PushButtonInit (uint8_t PBx);
+uint8_t brd_PushButtonRead (uint8_t PBx);
+void brd_PushButtonInitInt (uint8_t PBx, void (*IntIRQ) (void));
+uint8_t brd_PushButtonGetInt (uint8_t PBx);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /*__FUNCTIONS_PINS_H */
+#endif /*__EKTM4C123GXL_PINOUT_H */
  
