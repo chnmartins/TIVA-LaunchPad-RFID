@@ -374,4 +374,13 @@ uint32_t fGpio_IntGet (fGpio_Pin* const Gpio_Pin)
     return GPIOIntStatus(Gpio_Pin->Port, true);
 }
 
+/*
+ * Sets the GPIO pin to be controlled by the specified peripheral.
+ *
+ * NOTE: It is very time consumming to implement features to check the arguments in this function. IT'S ENTIRELY UP TO THE USER TO PROVIDE CORRECT ARGUMENTS IN THE ALTERNATE FUNCTION MEMBER OF THE STRUCTURE.
+ */
 
+void fGpio_setAlternateFunction (fGpio_Pin* const Gpio_Pin)
+{
+    GPIOPinConfigure(Gpio_Pin->AlternateFunction);
+}
