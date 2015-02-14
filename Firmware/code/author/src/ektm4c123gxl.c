@@ -149,5 +149,5 @@ uint8_t brd_PushButtonRead (uint8_t PBx)
         val |= fGpio_getLevel(&temp) ? PB2 : 0;
     }
 
-    return val;
+    return ~val;
 }

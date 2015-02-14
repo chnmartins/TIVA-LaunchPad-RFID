@@ -55,7 +55,7 @@ int main (void)
 
 	while (1)
 	{
-	    if (brd_PushButtonRead(PB1))
+	    if (brd_PushButtonRead(PB1) & PB1)
 	        brd_LedInteract(LEDG, LED_ON);
 	    else
 	        brd_LedInteract(LEDG, LED_OFF);

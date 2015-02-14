@@ -35,6 +35,7 @@ typedef struct
 	uint32_t    Direction;
 	uint32_t	Current;
 	uint32_t	Type;
+	uint32_t    IntType;
 } fGpio_Pin;
 
 /* Exported constants --------------------------------------------------------*/
@@ -85,6 +86,14 @@ typedef struct
 #define TYPE_ANALOG     GPIO_PIN_TYPE_ANALOG
 #define TYPE_WAKE_HIGH  GPIO_PIN_TYPE_WAKE_HIGH
 #define TYPE_WAKE_LOW   GPIO_PIN_TYPE_WAKE_LOW
+
+#define INTTYPE_NONE            0
+#define INTTYPE_FALLING_EDGE    GPIO_FALLING_EDGE
+#define INTTYPE_RISING_EDGE     GPIO_RISING_EDGE
+#define INTTYPE_BOTH_EDGES      GPIO_BOTH_EDGES
+#define INTTYPE_LOW_LEVEL       GPIO_LOW_LEVEL
+#define INTTYPE_HIGH_LEVEL      GPIO_HIGH_LEVEL
+#define INTTYPE_DISCRETE_INT    GPIO_DISCRETE_INT
 
 /* Exported macro ------------------------------------------------------------*/
 

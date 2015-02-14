@@ -36,53 +36,62 @@
 #define	GPIO_UNLOCK_VALUE	(0x4C4F434B)
 
 /* Private macro -------------------------------------------------------------*/
-#define	ASSERT_GPIO_PORT_BASE(x)	((x) == GPIO_PORTA_BASE || \
-									 (x) == GPIO_PORTB_BASE || \
-									 (x) == GPIO_PORTC_BASE || \
-									 (x) == GPIO_PORTD_BASE || \
-									 (x) == GPIO_PORTE_BASE || \
-									 (x) == GPIO_PORTF_BASE || \
-									 (x) == GPIO_PORTG_BASE || \
-									 (x) == GPIO_PORTH_BASE || \
-									 (x) == GPIO_PORTJ_BASE || \
-									 (x) == GPIO_PORTK_BASE || \
-									 (x) == GPIO_PORTL_BASE || \
-									 (x) == GPIO_PORTM_BASE || \
-									 (x) == GPIO_PORTN_BASE || \
-									 (x) == GPIO_PORTP_BASE || \
-									 (x) == GPIO_PORTQ_BASE || \
-									 (x) == GPIO_PORTR_BASE || \
-									 (x) == GPIO_PORTS_BASE || \
-									 (x) == GPIO_PORTT_BASE)
+#define	ASSERT_PORT(x)	            ((x) == PORT_A || \
+									 (x) == PORT_B || \
+									 (x) == PORT_C || \
+									 (x) == PORT_D || \
+									 (x) == PORT_E || \
+									 (x) == PORT_F || \
+									 (x) == PORT_G || \
+									 (x) == PORT_H || \
+									 (x) == PORT_J || \
+									 (x) == PORT_K || \
+									 (x) == PORT_L || \
+									 (x) == PORT_M || \
+									 (x) == PORT_N || \
+									 (x) == PORT_P || \
+									 (x) == PORT_Q || \
+									 (x) == PORT_R || \
+									 (x) == PORT_S || \
+									 (x) == PORT_T)
 
-#define	ASSERT_GPIO_PIN(x)			((x) == GPIO_PIN_0 || \
-									 (x) == GPIO_PIN_1 || \
-									 (x) == GPIO_PIN_2 || \
-									 (x) == GPIO_PIN_3 || \
-									 (x) == GPIO_PIN_4 || \
-									 (x) == GPIO_PIN_5 || \
-									 (x) == GPIO_PIN_6 || \
-									 (x) == GPIO_PIN_7)
+#define	ASSERT_PIN(x)			    ((x) == PIN_0 || \
+									 (x) == PIN_1 || \
+									 (x) == PIN_2 || \
+									 (x) == PIN_3 || \
+									 (x) == PIN_4 || \
+									 (x) == PIN_5 || \
+									 (x) == PIN_6 || \
+									 (x) == PIN_7)
 
-#define	ASSERT_GPIO_TYPE(x)			((x) == GPIO_PIN_TYPE_STD || \
-									 (x) == GPIO_PIN_TYPE_STD_WPU || \
-									 (x) == GPIO_PIN_TYPE_STD_WPD || \
-									 (x) == GPIO_PIN_TYPE_OD || \
-									 (x) == GPIO_PIN_TYPE_ANALOG || \
-									 (x) == GPIO_PIN_TYPE_WAKE_HIGH || \
-									 (x) == GPIO_PIN_TYPE_WAKE_LOW)
+#define ASSERT_DIRECTION(x)         ((x) == DIR_IN || \
+                                     (x) == DIR_OUT || \
+                                     (x) == DIR_HW)
 
-#define	ASSERT_CURRENT(x)		((x) == GPIO_STRENGTH_2MA || \
-									 (x) == GPIO_STRENGTH_4MA || \
-									 (x) == GPIO_STRENGTH_6MA || \
-									 (x) == GPIO_STRENGTH_8MA || \
-									 (x) == GPIO_STRENGTH_8MA_SC || \
-									 (x) == GPIO_STRENGTH_10MA || \
-									 (x) == GPIO_STRENGTH_12MA)
+#define ASSERT_CURRENT(x)           ((x) == CURR_2MA || \
+                                     (x) == CURR_4MA || \
+                                     (x) == CURR_6MA || \
+                                     (x) == CURR_8MA || \
+                                     (x) == CURR_8MA_SC || \
+                                     (x) == CURR_10MA || \
+                                     (x) == CURR_12MA)
 
-#define ASSERT_GPIO_DIRECTION(x)    ((x) == GPIO_DIR_MODE_IN || \
-                                     (x) == GPIO_DIR_MODE_OUT || \
-                                     (x) == GPIO_DIR_MODE_HW)
+#define	ASSERT_TYPE(x)			    ((x) == TYPE_PP || \
+									 (x) == TYPE_PP_PU || \
+									 (x) == TYPE_PP_PD || \
+									 (x) == TYPE_OD || \
+									 (x) == TYPE_ANALOG || \
+									 (x) == TYPE_WAKE_HIGH || \
+									 (x) == TYPE_WAKE_LOW)
+
+#define ASSERT_INTTYPE(x)           ((x) == INTTYPE_NONE || \
+                                     (x) == INTTYPE_FALLING_EDGE || \
+                                     (x) == INTTYPE_RISING_EDGE || \
+                                     (x) == INTTYPE_BOTH_EDGES || \
+                                     (x) == INTTYPE_LOW_LEVEL || \
+                                     (x) == INTTYPE_HIGH_LEVEL || \
+                                     (x) == INTTYPE_DISCRETE_INT)
+
 /* Private variables ---------------------------------------------------------*/
 
 /* Private function prototypes -----------------------------------------------*/
@@ -96,7 +105,7 @@
 void fGpio_enableSysCtl (fGpio_Pin* const Gpio_Pin)
 {
 #ifdef	DEBUG
-	ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
+	ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
 #endif
 
 	switch (Gpio_Pin->Port)
@@ -167,7 +176,7 @@ void fGpio_enableSysCtl (fGpio_Pin* const Gpio_Pin)
 uint32_t fGpio_getIntPin (fGpio_Pin* const Gpio_Pin)
 {
 #ifdef	DEBUG
-	ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->Pin));
+	ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
 #endif
 
 	switch (Gpio_Pin->Pin)
@@ -200,8 +209,8 @@ uint32_t fGpio_getIntPin (fGpio_Pin* const Gpio_Pin)
 void fGpio_unlockPin (fGpio_Pin* const Gpio_Pin)
 {
 #ifdef	DEBUG
-	ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
-	ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->Pin));
+	ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
+	ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
 #endif
 
 	HWREG(Gpio_Pin->Port + GPIO_O_LOCK) = GPIO_UNLOCK_VALUE;
@@ -215,10 +224,10 @@ void fGpio_unlockPin (fGpio_Pin* const Gpio_Pin)
 void fGpio_setConfig (fGpio_Pin* const Gpio_Pin)
 {
 #ifdef	DEBUG
-	ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
-	ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->Pin));
+	ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
+	ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
 	ASSERT_PARAM(ASSERT_CURRENT(Gpio_Pin->Current));
-	ASSERT_PARAM(ASSERT_GPIO_TYPE(Gpio_Pin->Type));
+	ASSERT_PARAM(ASSERT_TYPE(Gpio_Pin->Type));
 #endif
 
 	GPIOPadConfigSet(Gpio_Pin->Port, Gpio_Pin->Pin, Gpio_Pin->Current, Gpio_Pin->Type);
@@ -231,9 +240,9 @@ void fGpio_setConfig (fGpio_Pin* const Gpio_Pin)
 void fGpio_setDirection (fGpio_Pin* const Gpio_Pin)
 {
 #ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
-    ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->Pin));
-    ASSERT_PARAM(ASSERT_GPIO_DIRECTION(Gpio_Pin->Direction));
+    ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
+    ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
+    ASSERT_PARAM(ASSERT_DIRECTION(Gpio_Pin->Direction));
 #endif
 
     GPIODirModeSet(Gpio_Pin->Port, Gpio_Pin->Pin, Gpio_Pin->Direction);
@@ -246,8 +255,8 @@ void fGpio_setDirection (fGpio_Pin* const Gpio_Pin)
 void fGpio_setHigh (fGpio_Pin* const Gpio_Pin)
 {
 #ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
-    ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->Pin));
+    ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
+    ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
 #endif
 
     GPIOPinWrite(Gpio_Pin->Port, Gpio_Pin->Pin, Gpio_Pin->Pin);
@@ -260,8 +269,8 @@ void fGpio_setHigh (fGpio_Pin* const Gpio_Pin)
 void fGpio_setLow (fGpio_Pin* const Gpio_Pin)
 {
 #ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
-    ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->Pin));
+    ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
+    ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
 #endif
 
     GPIOPinWrite(Gpio_Pin->Port, Gpio_Pin->Pin, ~(Gpio_Pin->Pin));
@@ -274,8 +283,8 @@ void fGpio_setLow (fGpio_Pin* const Gpio_Pin)
 void fGpio_setToggle (fGpio_Pin* const Gpio_Pin)
 {
 #ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
-    ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->Pin));
+    ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
+    ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
 #endif
 
     if (fGpio_getLevel(Gpio_Pin))
@@ -291,8 +300,8 @@ void fGpio_setToggle (fGpio_Pin* const Gpio_Pin)
 bool fGpio_getLevel (fGpio_Pin* const Gpio_Pin)
 {
 #ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
-    ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->Pin));
+    ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
+    ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
 #endif
 
     if (GPIOPinRead(Gpio_Pin->Port, Gpio_Pin->Pin))
@@ -312,3 +321,4 @@ void fGpio_Init (fGpio_Pin* const Gpio_Pin)
     fGpio_setDirection(Gpio_Pin);
     fGpio_setConfig(Gpio_Pin);
 }
+
