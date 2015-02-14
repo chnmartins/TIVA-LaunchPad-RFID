@@ -22,7 +22,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "functions_pins.h"
+#include "functions_gpio.h"
 #include "conf.h"
 #include "gpio.h"
 #include "hw_gpio.h"
@@ -93,7 +93,7 @@
  * Function that enables the SysCtl memory mapped register for the port specified.
  */
 
-void fPins_enableGpioSysCtl (fPins_Pin* const Gpio_Pin)
+void fGpio_enableSysCtl (fGpio_Pin* const Gpio_Pin)
 {
 #ifdef	DEBUG
 	ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
@@ -164,7 +164,7 @@ void fPins_enableGpioSysCtl (fPins_Pin* const Gpio_Pin)
  * Function that returns the GPIO interrupt pin for the pin specified.
  */
 
-uint32_t fPins_getGpioIntPin (fPins_Pin* const Gpio_Pin)
+uint32_t fGpio_getIntPin (fGpio_Pin* const Gpio_Pin)
 {
 #ifdef	DEBUG
 	ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->Pin));
@@ -197,7 +197,7 @@ uint32_t fPins_getGpioIntPin (fPins_Pin* const Gpio_Pin)
  * Function to unlock the specified GPIO pin on the specified port.
  */
 
-void fPins_unlockGpioPin (fPins_Pin* const Gpio_Pin)
+void fGpio_unlockPin (fGpio_Pin* const Gpio_Pin)
 {
 #ifdef	DEBUG
 	ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
@@ -212,7 +212,7 @@ void fPins_unlockGpioPin (fPins_Pin* const Gpio_Pin)
  * Function to set the current limit and the pin type of the GPIO pin specified.
  */
 
-void fPins_setGpioConfig (fPins_Pin* const Gpio_Pin)
+void fGpio_setConfig (fGpio_Pin* const Gpio_Pin)
 {
 #ifdef	DEBUG
 	ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
@@ -228,7 +228,7 @@ void fPins_setGpioConfig (fPins_Pin* const Gpio_Pin)
  * Function to set the current limit and the pin type of the GPIO pin specified.
  */
 
-void fPins_setGpioDirection (fPins_Pin* const Gpio_Pin)
+void fGpio_setDirection (fGpio_Pin* const Gpio_Pin)
 {
 #ifdef  DEBUG
     ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
@@ -243,7 +243,7 @@ void fPins_setGpioDirection (fPins_Pin* const Gpio_Pin)
  * Function to turn to level high the pin specified.
  */
 
-void fPins_setGpioHigh (fPins_Pin* const Gpio_Pin)
+void fGpio_setHigh (fGpio_Pin* const Gpio_Pin)
 {
 #ifdef  DEBUG
     ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
@@ -257,7 +257,7 @@ void fPins_setGpioHigh (fPins_Pin* const Gpio_Pin)
  * Function to turn to level low the pin specified.
  */
 
-void fPins_setGpioLow (fPins_Pin* const Gpio_Pin)
+void fGpio_setLow (fGpio_Pin* const Gpio_Pin)
 {
 #ifdef  DEBUG
     ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
@@ -271,14 +271,14 @@ void fPins_setGpioLow (fPins_Pin* const Gpio_Pin)
  * Function to toggle the pin specified.
  */
 
-void fPins_setGpioToggle (fPins_Pin* const Gpio_Pin)
+void fGpio_setToggle (fGpio_Pin* const Gpio_Pin)
 {
 #ifdef  DEBUG
     ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
     ASSERT_PARAM(ASSERT_GPIO_PIN(Gpio_Pin->Pin));
 #endif
 
-    if (fPins_getGpioLevel(Gpio_Pin))
+    if (fGpio_getLevel(Gpio_Pin))
         GPIOPinWrite(Gpio_Pin->Port, Gpio_Pin->Pin, ~Gpio_Pin->Pin);
     else
         GPIOPinWrite(Gpio_Pin->Port, Gpio_Pin->Pin, Gpio_Pin->Pin);
@@ -288,7 +288,7 @@ void fPins_setGpioToggle (fPins_Pin* const Gpio_Pin)
  * Function to read the status of the GPIO pin specified.
  */
 
-bool fPins_getGpioLevel (fPins_Pin* const Gpio_Pin)
+bool fGpio_getLevel (fGpio_Pin* const Gpio_Pin)
 {
 #ifdef  DEBUG
     ASSERT_PARAM(ASSERT_GPIO_PORT_BASE(Gpio_Pin->Port));
@@ -305,10 +305,10 @@ bool fPins_getGpioLevel (fPins_Pin* const Gpio_Pin)
  * Completely initializes a pin.
  */
 
-void fPins_InitGpioPin (fPins_Pin* const Gpio_Pin)
+void fGpio_Init (fGpio_Pin* const Gpio_Pin)
 {
-    fPins_enableGpioSysCtl(Gpio_Pin);
-    fPins_unlockGpioPin(Gpio_Pin);
-    fPins_setGpioDirection(Gpio_Pin);
-    fPins_setGpioConfig(Gpio_Pin);
+    fGpio_enableSysCtl(Gpio_Pin);
+    fGpio_unlockPin(Gpio_Pin);
+    fGpio_setDirection(Gpio_Pin);
+    fGpio_setConfig(Gpio_Pin);
 }

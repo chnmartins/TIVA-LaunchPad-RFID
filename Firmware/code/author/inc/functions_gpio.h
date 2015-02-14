@@ -35,7 +35,7 @@ typedef struct
 	uint32_t    Direction;
 	uint32_t	Current;
 	uint32_t	Type;
-} fPins_Pin;
+} fGpio_Pin;
 
 /* Exported constants --------------------------------------------------------*/
 #define PIN_0   GPIO_PIN_0
@@ -89,16 +89,16 @@ typedef struct
 /* Exported macro ------------------------------------------------------------*/
 
 /* Exported functions --------------------------------------------------------*/
-void fPins_enableGpioSysCtl (fPins_Pin* const Gpio_Pin);
-uint32_t fPins_getGpioIntPin (fPins_Pin* const Gpio_Pin);
-void fPins_unlockGpioPin (fPins_Pin* const Gpio_Pin);
-void fPins_setGpioConfig (fPins_Pin* const Gpio_Pin);
-void fPins_setGpioDirection (fPins_Pin* const Gpio_Pin);
-void fPins_setGpioToggle (fPins_Pin* const Gpio_Pin);
-void fPins_setGpioLow (fPins_Pin* const Gpio_Pin);
-void fPins_setGpioHigh (fPins_Pin* const Gpio_Pin);
-bool fPins_getGpioLevel (fPins_Pin* const Gpio_Pin);
-void fPins_InitGpioPin (fPins_Pin* const Gpio_Pin);
+void fGpio_enableSysCtl (fGpio_Pin* const Gpio_Pin);
+uint32_t fGpio_getIntPin (fGpio_Pin* const Gpio_Pin);
+void fGpio_unlockPin (fGpio_Pin* const Gpio_Pin);
+void fGpio_setConfig (fGpio_Pin* const Gpio_Pin);
+void fGpio_setDirection (fGpio_Pin* const Gpio_Pin);
+void fGpio_setToggle (fGpio_Pin* const Gpio_Pin);
+void fGpio_setLow (fGpio_Pin* const Gpio_Pin);
+void fGpio_setHigh (fGpio_Pin* const Gpio_Pin);
+bool fGpio_getLevel (fGpio_Pin* const Gpio_Pin);
+void fGpio_Init (fGpio_Pin* const Gpio_Pin);
 
 #ifdef __cplusplus
 }

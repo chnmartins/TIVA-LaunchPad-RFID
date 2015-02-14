@@ -19,7 +19,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "ektm4c123gxl.h"
-#include "functions_pins.h"
+#include "functions_gpio.h"
 #include "conf.h"
 
 /* Private typedef -----------------------------------------------------------*/
@@ -51,22 +51,22 @@
 
 void brd_LedInit (uint8_t LEDx)
 {
-    fPins_Pin temp = {.Current = CURR_2MA, .Direction = DIR_OUT, .Type = TYPE_PP_PU};
+    fGpio_Pin temp = {.Current = CURR_2MA, .Direction = DIR_OUT, .Type = TYPE_PP_PU};
 
     if (LEDx & LEDR)
     {
         temp.Pin = LEDR_PIN, temp.Port = LEDR_PORT;
-        fPins_InitGpioPin(&temp);
+        fGpio_Init(&temp);
     }
     if (LEDx & LEDG)
     {
         temp.Pin = LEDG_PIN, temp.Port = LEDG_PORT;
-        fPins_InitGpioPin(&temp);
+        fGpio_Init(&temp);
     }
     if (LEDx & LEDB)
     {
         temp.Pin = LEDB_PIN, temp.Port = LEDB_PORT;
-        fPins_InitGpioPin(&temp);
+        fGpio_Init(&temp);
     }
 }
 
@@ -76,19 +76,19 @@ void brd_LedInit (uint8_t LEDx)
 
 void brd_LedInteract (uint8_t LEDx, uint8_t LED_x)
 {
-    fPins_Pin temp;
-    void (*fnPtr) (fPins_Pin* const);
+    fGpio_Pin temp;
+    void (*fnPtr) (fGpio_Pin* const);
 
     switch (LED_x)
     {
     case LED_ON:
-        fnPtr = fPins_setGpioHigh;
+        fnPtr = fGpio_setHigh;
         break;
     case LED_OFF:
-        fnPtr = fPins_setGpioLow;
+        fnPtr = fGpio_setLow;
         break;
     case LED_TOGGLE:
-        fnPtr = fPins_setGpioToggle;
+        fnPtr = fGpio_setToggle;
         break;
     }
 
@@ -115,17 +115,17 @@ void brd_LedInteract (uint8_t LEDx, uint8_t LED_x)
 
 void brd_PushButtonInit (uint8_t PBx)
 {
-    fPins_Pin temp = {.Current = CURR_2MA, .Direction = DIR_IN, .Type = TYPE_PP_PU};
+    fGpio_Pin temp = {.Current = CURR_2MA, .Direction = DIR_IN, .Type = TYPE_PP_PU};
 
     if (PBx & PB1)
     {
         temp.Pin = PB1_PIN, temp.Port = PB1_PORT;
-        fPins_InitGpioPin(&temp);
+        fGpio_Init(&temp);
     }
     if (PBx & PB2)
     {
         temp.Pin = PB2_PIN, temp.Port = PB2_PORT;
-        fPins_InitGpioPin(&temp);
+        fGpio_Init(&temp);
     }
 }
 
@@ -135,18 +135,18 @@ void brd_PushButtonInit (uint8_t PBx)
 
 uint8_t brd_PushButtonRead (uint8_t PBx)
 {
-    fPins_Pin temp;
+    fGpio_Pin temp;
     uint8_t val = 0;
 
     if (PBx & PB1)
     {
         temp.Pin = PB1_PIN, temp.Port = PB1_PORT;
-        val |= fPins_getGpioLevel(&temp) ? PB1 : 0;
+        val |= fGpio_getLevel(&temp) ? PB1 : 0;
     }
     if (PBx & PB2)
     {
         temp.Pin = PB2_PIN, temp.Port = PB2_PORT;
-        val |= fPins_getGpioLevel(&temp) ? PB2 : 0;
+        val |= fGpio_getLevel(&temp) ? PB2 : 0;
     }
 
     return val;
