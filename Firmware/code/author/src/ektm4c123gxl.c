@@ -151,3 +151,55 @@ uint8_t brd_PushButtonRead (uint8_t PBx)
 
     return ~val;
 }
+
+/*
+ * Sets the external interrupts on the pushbuttons.
+ */
+
+void brd_PushButtonInitInt (uint8_t PBx, void (*IntIRQ) (void))
+{
+    fGpio_Pin temp = {.IntType = INTTYPE_FALLING_EDGE, .IntIRQ = IntIRQ};
+
+    if (PBx & PB1)
+    {
+        temp.Pin = PB1_PIN, temp.Port = PB1_PORT;
+        fGpio_IntInit(&temp);
+    }
+    if (PBx & PB2)
+    {
+        temp.Pin = PB2_PIN, temp.Port = PB2_PORT;
+        fGpio_IntInit(&temp);
+    }
+}
+
+/*
+ * Gets the status of the interrupt and clears it if active.
+ */
+
+uint8_t brd_PushButtonGetInt (uint8_t PBx)
+{
+    fGpio_Pin temp;
+    uint8_t val = 0;
+
+    if (PBx & PB1)
+    {
+        temp.Pin = PB1_PIN, temp.Port = PB1_PORT;
+        if (fGpio_IntGet(&temp) & temp.Pin)
+        {
+            val |= PB1;
+            fGpio_IntClear(&temp);
+        }
+    }
+
+    if (PBx & PB2)
+    {
+        temp.Pin = PB2_PIN, temp.Port = PB2_PORT;
+        if (fGpio_IntGet(&temp) & temp.Pin)
+        {
+            val |= PB2;
+            fGpio_IntClear(&temp);
+        }
+    }
+
+    return val;
+}

@@ -48,6 +48,8 @@ void brd_LedInit (uint8_t LEDx);
 void brd_LedInteract (uint8_t LEDx, uint8_t interact);
 void brd_PushButtonInit (uint8_t PBx);
 uint8_t brd_PushButtonRead (uint8_t PBx);
+void brd_PushButtonInitInt (uint8_t PBx, void (*IntIRQ) (void));
+uint8_t brd_PushButtonGetInt (uint8_t PBx);
 
 #ifdef __cplusplus
 }

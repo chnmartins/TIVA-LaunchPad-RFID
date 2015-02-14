@@ -46,18 +46,30 @@ void assert_failed (char* file, uint32_t line)
     }
 }
 
+void IRQHandler (void)
+{
+    uint8_t val = brd_PushButtonGetInt(PB1 | PB2);
+
+    if (val & PB1)
+    {
+        brd_LedInteract(LEDR, LED_ON);
+    }
+    if (val & PB2)
+    {
+        brd_LedInteract(LEDR, LED_OFF);
+    }
+}
+
 int main (void)
 {
     brd_LedInit(LEDG | LEDR | LEDB);
-    brd_PushButtonInit(PB1);
+    brd_PushButtonInit(PB1 | PB2);
+    brd_PushButtonInitInt(PB1 | PB2, IRQHandler);
 
     brd_LedInteract(LEDG | LEDR | LEDB, LED_OFF);
 
 	while (1)
 	{
-	    if (brd_PushButtonRead(PB1) & PB1)
-	        brd_LedInteract(LEDG, LED_ON);
-	    else
-	        brd_LedInteract(LEDG, LED_OFF);
+
 	}
 }

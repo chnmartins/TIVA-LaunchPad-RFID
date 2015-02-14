@@ -36,6 +36,7 @@ typedef struct
 	uint32_t	Current;
 	uint32_t	Type;
 	uint32_t    IntType;
+	void (*IntIRQ) (void);
 } fGpio_Pin;
 
 /* Exported constants --------------------------------------------------------*/
@@ -87,7 +88,6 @@ typedef struct
 #define TYPE_WAKE_HIGH  GPIO_PIN_TYPE_WAKE_HIGH
 #define TYPE_WAKE_LOW   GPIO_PIN_TYPE_WAKE_LOW
 
-#define INTTYPE_NONE            0
 #define INTTYPE_FALLING_EDGE    GPIO_FALLING_EDGE
 #define INTTYPE_RISING_EDGE     GPIO_RISING_EDGE
 #define INTTYPE_BOTH_EDGES      GPIO_BOTH_EDGES
@@ -108,6 +108,9 @@ void fGpio_setLow (fGpio_Pin* const Gpio_Pin);
 void fGpio_setHigh (fGpio_Pin* const Gpio_Pin);
 bool fGpio_getLevel (fGpio_Pin* const Gpio_Pin);
 void fGpio_Init (fGpio_Pin* const Gpio_Pin);
+void fGpio_IntInit (fGpio_Pin* const Gpio_Pin);
+uint32_t fGpio_IntGet (fGpio_Pin* const Gpio_Pin);
+void fGpio_IntClear (fGpio_Pin* const Gpio_Pin);
 
 #ifdef __cplusplus
 }

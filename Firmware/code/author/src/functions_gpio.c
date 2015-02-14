@@ -84,8 +84,7 @@
 									 (x) == TYPE_WAKE_HIGH || \
 									 (x) == TYPE_WAKE_LOW)
 
-#define ASSERT_INTTYPE(x)           ((x) == INTTYPE_NONE || \
-                                     (x) == INTTYPE_FALLING_EDGE || \
+#define ASSERT_INTTYPE(x)           ((x) == INTTYPE_FALLING_EDGE || \
                                      (x) == INTTYPE_RISING_EDGE || \
                                      (x) == INTTYPE_BOTH_EDGES || \
                                      (x) == INTTYPE_LOW_LEVEL || \
@@ -316,9 +315,63 @@ bool fGpio_getLevel (fGpio_Pin* const Gpio_Pin)
 
 void fGpio_Init (fGpio_Pin* const Gpio_Pin)
 {
+#ifdef  DEBUG
+    ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
+    ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
+    ASSERT_PARAM(ASSERT_DIRECTION(Gpio_Pin->Direction));
+    ASSERT_PARAM(ASSERT_CURRENT(Gpio_Pin->Current));
+    ASSERT_PARAM(ASSERT_TYPE(Gpio_Pin->Type));
+#endif
+
     fGpio_enableSysCtl(Gpio_Pin);
     fGpio_unlockPin(Gpio_Pin);
     fGpio_setDirection(Gpio_Pin);
     fGpio_setConfig(Gpio_Pin);
 }
+
+/*
+ * Configures the internal interrupt on a pin, and enables it by default.
+ */
+
+void fGpio_IntInit (fGpio_Pin* const Gpio_Pin)
+{
+#ifdef  DEBUG
+    ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
+    ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
+    ASSERT_PARAM(ASSERT_INTTYPE(Gpio_Pin->IntType));
+#endif
+
+    GPIOIntTypeSet(Gpio_Pin->Port, Gpio_Pin->Pin, Gpio_Pin->IntType);
+    GPIOIntRegister(Gpio_Pin->Port, Gpio_Pin->IntIRQ);
+    GPIOIntEnable(Gpio_Pin->Port, fGpio_getIntPin(Gpio_Pin));
+}
+
+/*
+ * Clears the interrupt.
+ */
+
+void fGpio_IntClear (fGpio_Pin* const Gpio_Pin)
+{
+#ifdef  DEBUG
+    ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
+    ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
+#endif
+
+
+    GPIOIntClear(Gpio_Pin->Port, Gpio_Pin->Pin);
+}
+
+/*
+ * Returns the status of the masekd external interrupts on the specified port.
+ */
+
+uint32_t fGpio_IntGet (fGpio_Pin* const Gpio_Pin)
+{
+#ifdef  DEBUG
+    ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
+#endif
+
+    return GPIOIntStatus(Gpio_Pin->Port, true);
+}
+
 
