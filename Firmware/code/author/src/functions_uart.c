@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "functions_uart.h"
+#include "functions_gpio.h"
 #include "hw_memmap.h"
 #include "sysctl.h"
 #include "conf.h"
@@ -28,6 +29,7 @@
 /* Private typedef -----------------------------------------------------------*/
 
 /* Private define ------------------------------------------------------------*/
+#define PIOSC_NOMINAL_FREQUENCY     16000000
 
 /* Private macro -------------------------------------------------------------*/
 #define ASSERT_UART(x)          ((x) == UART0_BASE || \
@@ -39,6 +41,37 @@
                                  (x) == UART6_BASE || \
                                  (x) == UART7_BASE)
 
+#define ASSERT_WLEN(x)          ((x) == WLEN_EIGTH || \
+                                 (x) == WLEN_SEVEN || \
+                                 (x) == WLEN_SIX || \
+                                 (x) == WLEN_FIVE)
+
+#define ASSERT_STOP(x)          ((x) == STOP_ONE || \
+                                 (x) == STOP_TWO)
+
+#define ASSERT_PARITY(x)        ((x) == PAR_EVEN || \
+                                 (x) == PAR_ODD || \
+                                 (x) == PAR_ONE || \
+                                 (x) == PAR_ZERO)
+
+#define ASSERT_CLOCK_SOURCE(x)  ((x) == UART_CLOCK_SYSTEM || \
+                                 (x) == UART_CLOCK_PIOSC)
+
+#define ASSERT_BAUD_RATE(x)     ((x) == BR_110 || \
+                                 (x) == BR_300 || \
+                                 (x) == BR_600 || \
+                                 (x) == BR_1200 || \
+                                 (x) == BR_2400 || \
+                                 (x) == BR_4800 || \
+                                 (x) == BR_9600 || \
+                                 (x) == BR_14400 || \
+                                 (x) == BR_19200 || \
+                                 (x) == BR_38400 || \
+                                 (x) == BR_57600 || \
+                                 (x) == BR_115200 || \
+                                 (x) == BR_230400 || \
+                                 (x) == BR_460800 || \
+                                 (x) == BR_921600)
 
 /* Private variables ---------------------------------------------------------*/
 
@@ -84,3 +117,112 @@ void fUart_enableSysCtl (fUart_Mod* const Uart_Mod)
         break;
     }
 }
+
+/*
+ * Function to configure the GPIO pins to be managed by the UART hardware peripheral.
+ */
+
+void fUart_setPins (fUart_Mod* const Uart_Mod)
+{
+    fGpio_Pin Rx_Pin = {.Pin = Uart_Mod->Rx->Pin, \
+                        .Port = Uart_Mod->Rx->Port, \
+                        .AlternateFunction = Uart_Mod->Rx->AlternateFunction, \
+                        .Current = Uart_Mod->Rx->Current, \
+                        .Type = Uart_Mod->Rx->Type, \
+                        .Direction = DIR_HW};
+
+    fGpio_Pin Tx_Pin = {.Pin = Uart_Mod->Tx->Pin, \
+                        .Port = Uart_Mod->Tx->Port, \
+                        .AlternateFunction = Uart_Mod->Tx->AlternateFunction, \
+                        .Current = Uart_Mod->Tx->Current, \
+                        .Type = Uart_Mod->Tx->Type, \
+                        .Direction = DIR_HW};
+
+    fGpio_enableSysCtl(&Rx_Pin);
+    fGpio_enableSysCtl(&Tx_Pin);
+
+    fGpio_setDirection(&Rx_Pin);
+    fGpio_setDirection(&Tx_Pin);
+
+    fGpio_setAlternateFunction(&Rx_Pin);
+    fGpio_setAlternateFunction(&Tx_Pin);
+
+    fGpio_setConfig(&Rx_Pin);
+    fGpio_setConfig(&Tx_Pin);
+}
+
+/*
+ * Disable the UART peripheral.
+ */
+
+void fUart_DeInit (fUart_Mod* const Uart_Mod)
+{
+#ifdef  DEBUG
+    ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
+#endif
+
+    UARTDisable(Uart_Mod->Module);
+}
+
+/*
+ * Configure the UART peripheral.
+ */
+
+void fUart_setConfig (fUart_Mod* const Uart_Mod)
+{
+#ifdef  DEBUG
+    ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
+    ASSERT_PARAM(ASSERT_WLEN(Uart_Mod->Wlen));
+    ASSERT_PARAM(ASSERT_STOP(Uart_Mod->Stop));
+    ASSERT_PARAM(ASSERT_PARITY(Uart_Mod->Parity));
+    ASSERT_PARAM(ASSERT_BAUD_RATE(Uart_Mod->BaudRate));
+    ASSERT_PARAM(ASSERT_CLOCK_SOURCE(Uart_Mod->ClockSource));
+#endif
+
+    uint32_t ClockFrequency;
+
+    UARTClockSourceSet(Uart_Mod->Module, Uart_Mod->ClockSource);
+
+    if (Uart_Mod->ClockSource == CLK_SYSTEM)
+        ClockFrequency = SysCtlClockGet();
+    else if (Uart_Mod->ClockSource == CLK_INTERNAL)
+        ClockFrequency = PIOSC_NOMINAL_FREQUENCY;
+
+    UARTConfigSetExpClk(Uart_Mod->Module, ClockFrequency, Uart_Mod->BaudRate, Uart_Mod->Parity | Uart_Mod->Stop | Uart_Mod->Wlen);
+}
+
+/*
+ * Starts the specified UART peripheral.
+ */
+
+void fUart_Start (fUart_Mod* const Uart_Mod)
+{
+#ifdef  DEBUG
+    ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
+#endif
+
+    UARTEnable(Uart_Mod->Module);
+}
+
+/*
+ * Function to initialize the UART interface specified.
+ */
+
+void fUart_Init (fUart_Mod* const Uart_Mod)
+{
+#ifdef  DEBUG
+    ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
+    ASSERT_PARAM(ASSERT_WLEN(Uart_Mod->Wlen));
+    ASSERT_PARAM(ASSERT_STOP(Uart_Mod->Stop));
+    ASSERT_PARAM(ASSERT_PARITY(Uart_Mod->Parity));
+    ASSERT_PARAM(ASSERT_BAUD_RATE(Uart_Mod->BaudRate));
+    ASSERT_PARAM(ASSERT_CLOCK_SOURCE(Uart_Mod->ClockSource));
+#endif
+
+    fUart_enableSysCtl(Uart_Mod);
+    fUart_setPins(Uart_Mod);
+    fUart_DeInit(Uart_Mod);
+    fUart_setConfig(Uart_Mod);
+    fUart_Start(Uart_Mod);
+}
+
