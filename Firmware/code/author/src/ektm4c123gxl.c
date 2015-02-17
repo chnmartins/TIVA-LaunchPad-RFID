@@ -56,7 +56,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 uint8_t* RxBuf;
-uint8_t iRxBuf = 0;
+uint8_t* TxBuf;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -233,7 +233,8 @@ void brd_UartInit (uint8_t UARTx, void (*IntIRQ) (void))
     switch (UARTx)
     {
     case UARTDBG:
-        //RxBuf = (uint8_t*) calloc(UARTDBG_RXBUF_SIZE, sizeof(uint8_t));
+        RxBuf = (uint8_t*) calloc(UARTDBG_RXBUF_SIZE, sizeof(uint8_t));
+        TxBuf = (uint8_t*) calloc(UARTDBG_TXBUF_SIZE, sizeof(uint8_t));
 
         Rx.Pin = UARTDBG_RX_PIN;
         Rx.Port = UARTDBG_RX_PORT;
@@ -255,7 +256,7 @@ void brd_UartInit (uint8_t UARTx, void (*IntIRQ) (void))
         Mod.Stop = STOP_ONE;
         Mod.Wlen = WLEN_EIGTH;
         Mod.BaudRate = BR_115200;
-        Mod.Interrupts = INT_RECEIVE | INT_TRANSMIT;
+        Mod.Interrupts = INT_RECEIVE | INT_TRANSMIT | INT_OVERRUN_ERROR | INT_BREAK_ERROR | INT_PARITY_ERROR | INT_FRAMING_ERROR | INT_RECEIVE_TIMEOUT;
         Mod.IntIRQ = IntIRQ;
         break;
     }
@@ -271,39 +272,79 @@ void brd_UartDbgDefIRQHandler (void)
 {
     static uint8_t tx_index = 0;
     static uint8_t rx_index = 0;
-    fUart_Mod tempe = {.Module = MOD_UART0, .Interrupts = INT_RECEIVE | INT_TRANSMIT};
+    fUart_Mod tempe = {.Module = MOD_UART0, .Interrupts = INT_RECEIVE | INT_TRANSMIT | INT_OVERRUN_ERROR | INT_BREAK_ERROR | INT_PARITY_ERROR | INT_FRAMING_ERROR | INT_RECEIVE_TIMEOUT};
     uint32_t val;
 
     val = fUart_IntGet(&tempe);
 
     if (val & INT_RECEIVE)
     {
-        //fUart_receiveByte(&tempe);
+        fUart_receiveByte(&tempe);
+        *(RxBuf + rx_index) = tempe.RxByte;
 
-        brd_LedInteract(LEDR, LED_TOGGLE);
-
-        //*(RxBuf + rx_index) = temp.RxByte;
-
-        //if (++rx_index >= UARTDBG_RXBUF_SIZE)
-            //rx_index = 0;
-
-        tempe.Interrupts = INT_RECEIVE;
-        fUart_IntClear(&tempe);
+        if (++rx_index >= UARTDBG_RXBUF_SIZE)
+            rx_index = 0;
     }
-
     if (val & INT_TRANSMIT)
     {
+        tempe.TxByte = *(TxBuf + tx_index);
 
+        if (tempe.TxByte)
+        {
+            fUart_sendByte(&tempe);
+            *(TxBuf + tx_index) = 0;
 
-
-        //if (++tx_index >= UARTDBG_TXBUF_SIZE)
-            //tx_index = 0;
-
-        tempe.Interrupts = INT_TRANSMIT;
-        fUart_IntClear(&tempe);
+            if (++tx_index >= UARTDBG_TXBUF_SIZE)
+                tx_index = 0;
+        }
+        else
+        {
+            tempe.Interrupts = INT_TRANSMIT;
+            fUart_IntDisable(&tempe);
+        }
     }
+    if (val & INT_OVERRUN_ERROR)
+    {
+
+    }
+    if (val & INT_BREAK_ERROR)
+    {
+
+    }
+    if (val & INT_PARITY_ERROR)
+    {
+
+    }
+    if (val & INT_FRAMING_ERROR)
+    {
+
+    }
+    if (val & INT_RECEIVE_TIMEOUT)
+    {
+
+    }
+
+    tempe.Interrupts = val;
+    fUart_IntClear(&tempe);
 }
 
 /*
- *
+ * Transmits data over the UARTDBG peripheral.
  */
+
+void brd_UartDbgDefTransmit (uint8_t* string)
+{
+    static uint8_t tx_index = 0;
+    fUart_Mod tempe = {.Module = MOD_UART0, .Interrupts = INT_TRANSMIT, .TxByte = 0x30};
+
+    while (*string)
+    {
+        while (*(TxBuf + tx_index));
+        *(TxBuf + tx_index++) = *(string++);
+        if (tx_index >= UARTDBG_TXBUF_SIZE)
+            tx_index = 0;
+    }
+
+    fUart_IntEnable(&tempe);
+    fUart_sendByte(&tempe);
+}

@@ -54,6 +54,7 @@ void brd_PushButtonInitInt (uint8_t PBx, void (*IntIRQ) (void));
 uint8_t brd_PushButtonGetInt (uint8_t PBx);
 void brd_UartInit (uint8_t UARTx, void (*IntIRQ) (void));
 void brd_UartDbgDefIRQHandler (void);
+void brd_UartDbgDefTransmit (uint8_t* string);
 
 #ifdef __cplusplus
 }

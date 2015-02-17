@@ -125,7 +125,8 @@ void fUart_Init (fUart_Mod* const Uart_Mod);
 void fUart_IntInit (fUart_Mod* const Uart_Mod);
 uint32_t fUart_IntGet (fUart_Mod* const Uart_Mod);
 void fUart_IntClear (fUart_Mod* const Uart_Mod);
-
+void fUart_IntDisable (fUart_Mod* const Uart_Mod);
+void fUart_IntEnable (fUart_Mod* const Uart_Mod);
 void fUart_sendByte (fUart_Mod* const Uart_Mod);
 void fUart_receiveByte (fUart_Mod* Uart_Mod);
 

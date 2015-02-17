@@ -53,10 +53,12 @@ void IRQHandler (void)
     if (val & PB1)
     {
         brd_LedInteract(LEDR, LED_ON);
+        brd_LedInteract(LEDG, LED_ON);
     }
     if (val & PB2)
     {
         brd_LedInteract(LEDR, LED_OFF);
+        brd_LedInteract(LEDG, LED_OFF);
     }
 }
 
@@ -72,10 +74,14 @@ int main (void)
 
     brd_LedInteract(LEDG | LEDR | LEDB, LED_OFF);
 
-    //brd_UartInit(UARTDBG, brd_UartDbgDefIRQHandler);
+    brd_UartInit(UARTDBG, brd_UartDbgDefIRQHandler);
+
+    brd_UartDbgDefTransmit("How are you?\n");
+    brd_UartDbgDefTransmit("Oh, I'm doing fine.\n");
+    brd_UartDbgDefTransmit("Those are good news.\n");
+    brd_UartDbgDefTransmit("And you, how are you doing?\n");
 
 	while (1)
 	{
-
 	}
 }

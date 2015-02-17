@@ -21,6 +21,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "functions_uart.h"
+#include "hw_uart.h"
+#include "hw_types.h"
+#include "interrupt.h"
 #include "functions_gpio.h"
 #include "hw_memmap.h"
 #include "sysctl.h"
@@ -190,6 +193,7 @@ void fUart_setConfig (fUart_Mod* const Uart_Mod)
         ClockFrequency = PIOSC_NOMINAL_FREQUENCY;
 
     UARTConfigSetExpClk(Uart_Mod->Module, ClockFrequency, Uart_Mod->BaudRate, Uart_Mod->Parity | Uart_Mod->Stop | Uart_Mod->Wlen);
+    UARTFIFODisable(Uart_Mod->Module);
 }
 
 /*
@@ -202,7 +206,8 @@ void fUart_Start (fUart_Mod* const Uart_Mod)
     ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
 #endif
 
-    UARTEnable(Uart_Mod->Module);
+    // Using UARTEnable causes the FIFO to be initialized aswell.
+    HWREG(Uart_Mod->Module + UART_O_CTL) |= (UART_CTL_UARTEN | UART_CTL_TXE | UART_CTL_RXE);
 }
 
 /*
@@ -276,6 +281,32 @@ void fUart_IntClear (fUart_Mod* const Uart_Mod)
 }
 
 /*
+ * Disables the specified interrupts.
+ */
+
+void fUart_IntDisable (fUart_Mod* const Uart_Mod)
+{
+#ifdef  DEBUG
+    ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
+#endif
+
+    UARTIntDisable(Uart_Mod->Module, Uart_Mod->Interrupts);
+}
+
+/*
+ * Enables the specified interrupts.
+ */
+
+void fUart_IntEnable (fUart_Mod* const Uart_Mod)
+{
+#ifdef  DEBUG
+    ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
+#endif
+
+    UARTIntEnable(Uart_Mod->Module, Uart_Mod->Interrupts);
+}
+
+/*
  * Sends the specified byte through the UART peripheral specified.
  */
 
@@ -298,5 +329,5 @@ void fUart_receiveByte (fUart_Mod* Uart_Mod)
     ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
 #endif
 
-    //Uart_Mod->RxByte = UARTCharGet(Uart_Mod->Module);
+    Uart_Mod->RxByte = UARTCharGet(Uart_Mod->Module);
 }
