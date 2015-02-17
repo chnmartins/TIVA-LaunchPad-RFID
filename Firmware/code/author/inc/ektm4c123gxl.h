@@ -41,6 +41,8 @@
 #define PB1_ON  0x01
 #define PB2_ON  0x02
 
+#define UARTDBG 0x01
+
 /* Exported macro ------------------------------------------------------------*/
 
 /* Exported functions --------------------------------------------------------*/
@@ -50,6 +52,8 @@ void brd_PushButtonInit (uint8_t PBx);
 uint8_t brd_PushButtonRead (uint8_t PBx);
 void brd_PushButtonInitInt (uint8_t PBx, void (*IntIRQ) (void));
 uint8_t brd_PushButtonGetInt (uint8_t PBx);
+void brd_UartInit (uint8_t UARTx, void (*IntIRQ) (void));
+void brd_UartDbgDefIRQHandler (void);
 
 #ifdef __cplusplus
 }

@@ -18,8 +18,12 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
+#include <stdlib.h>
+#include <stddef.h>
 #include "ektm4c123gxl.h"
 #include "functions_gpio.h"
+#include "functions_uart.h"
+#include "pin_map.h"
 #include "conf.h"
 
 /* Private typedef -----------------------------------------------------------*/
@@ -37,9 +41,22 @@
 #define PB2_PIN      GPIO_PIN_0
 #define PB2_PORT     GPIO_PORTF_BASE
 
+#define UARTDBG_RX_PIN  GPIO_PIN_0
+#define UARTDBG_RX_PORT GPIO_PORTA_BASE
+#define UARTDBG_RX_AF   GPIO_PA0_U0RX
+
+#define UARTDBG_TX_PIN  GPIO_PIN_1
+#define UARTDBG_TX_PORT GPIO_PORTA_BASE
+#define UARTDBG_TX_AF   GPIO_PA1_U0TX
+
+#define UARTDBG_RXBUF_SIZE   30
+#define UARTDBG_TXBUF_SIZE   30
+
 /* Private macro -------------------------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
+uint8_t* RxBuf;
+uint8_t iRxBuf = 0;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -203,3 +220,90 @@ uint8_t brd_PushButtonGetInt (uint8_t PBx)
 
     return val;
 }
+
+/*
+ * Initializes the specified UART interface.
+ */
+
+void brd_UartInit (uint8_t UARTx, void (*IntIRQ) (void))
+{
+    fUart_Pin Rx, Tx;
+    fUart_Mod Mod;
+
+    switch (UARTx)
+    {
+    case UARTDBG:
+        //RxBuf = (uint8_t*) calloc(UARTDBG_RXBUF_SIZE, sizeof(uint8_t));
+
+        Rx.Pin = UARTDBG_RX_PIN;
+        Rx.Port = UARTDBG_RX_PORT;
+        Rx.AlternateFunction = UARTDBG_RX_AF;
+        Rx.Current = CURR_2MA;
+        Rx.Type = TYPE_PP_PD;
+
+        Tx.Pin = UARTDBG_TX_PIN;
+        Tx.Port = UARTDBG_TX_PORT;
+        Tx.AlternateFunction = UARTDBG_TX_AF;
+        Tx.Current = CURR_2MA;
+        Tx.Type = TYPE_PP_PD;
+
+        Mod.Module = MOD_UART0;
+        Mod.Rx = &Rx;
+        Mod.Tx = &Tx;
+        Mod.ClockSource = CLK_SYSTEM;
+        Mod.Parity = PAR_NONE;
+        Mod.Stop = STOP_ONE;
+        Mod.Wlen = WLEN_EIGTH;
+        Mod.BaudRate = BR_115200;
+        Mod.Interrupts = INT_RECEIVE | INT_TRANSMIT;
+        Mod.IntIRQ = IntIRQ;
+        break;
+    }
+
+    fUart_Init(&Mod);
+}
+
+/*
+ * Default IRQ handler for the UART Peripheral.
+ */
+
+void brd_UartDbgDefIRQHandler (void)
+{
+    static uint8_t tx_index = 0;
+    static uint8_t rx_index = 0;
+    fUart_Mod tempe = {.Module = MOD_UART0, .Interrupts = INT_RECEIVE | INT_TRANSMIT};
+    uint32_t val;
+
+    val = fUart_IntGet(&tempe);
+
+    if (val & INT_RECEIVE)
+    {
+        //fUart_receiveByte(&tempe);
+
+        brd_LedInteract(LEDR, LED_TOGGLE);
+
+        //*(RxBuf + rx_index) = temp.RxByte;
+
+        //if (++rx_index >= UARTDBG_RXBUF_SIZE)
+            //rx_index = 0;
+
+        tempe.Interrupts = INT_RECEIVE;
+        fUart_IntClear(&tempe);
+    }
+
+    if (val & INT_TRANSMIT)
+    {
+
+
+
+        //if (++tx_index >= UARTDBG_TXBUF_SIZE)
+            //tx_index = 0;
+
+        tempe.Interrupts = INT_TRANSMIT;
+        fUart_IntClear(&tempe);
+    }
+}
+
+/*
+ *
+ */

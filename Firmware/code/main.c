@@ -60,6 +60,10 @@ void IRQHandler (void)
     }
 }
 
+/*
+ * Main function.
+ */
+
 int main (void)
 {
     brd_LedInit(LEDG | LEDR | LEDB);
@@ -67,6 +71,8 @@ int main (void)
     brd_PushButtonInitInt(PB1 | PB2, IRQHandler);
 
     brd_LedInteract(LEDG | LEDR | LEDB, LED_OFF);
+
+    //brd_UartInit(UARTDBG, brd_UartDbgDefIRQHandler);
 
 	while (1)
 	{

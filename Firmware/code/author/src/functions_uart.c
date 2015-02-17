@@ -49,7 +49,8 @@
 #define ASSERT_STOP(x)          ((x) == STOP_ONE || \
                                  (x) == STOP_TWO)
 
-#define ASSERT_PARITY(x)        ((x) == PAR_EVEN || \
+#define ASSERT_PARITY(x)        ((x) == PAR_NONE || \
+                                 (x) == PAR_EVEN || \
                                  (x) == PAR_ODD || \
                                  (x) == PAR_ONE || \
                                  (x) == PAR_ZERO)
@@ -205,7 +206,7 @@ void fUart_Start (fUart_Mod* const Uart_Mod)
 }
 
 /*
- * Function to initialize the UART interface specified.
+ * Function to initialize and start the UARt interface specified.
  */
 
 void fUart_Init (fUart_Mod* const Uart_Mod)
@@ -223,6 +224,79 @@ void fUart_Init (fUart_Mod* const Uart_Mod)
     fUart_setPins(Uart_Mod);
     fUart_DeInit(Uart_Mod);
     fUart_setConfig(Uart_Mod);
+    fUart_IntInit(Uart_Mod);
     fUart_Start(Uart_Mod);
 }
 
+/*
+ * Initializes the specified interrupts and sets the IRQ handler.
+ *
+ * NOTE: Interrupts are a logical OR and as such the function doesn't assert this parameter. It depends on the user to give correct parameters.
+ * NOTE: The IntIRQ parameter isn't checked, it depends on the user to give correct parameters.
+ */
+
+void fUart_IntInit (fUart_Mod* const Uart_Mod)
+{
+#ifdef  DEBUG
+    ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
+#endif
+
+    if (Uart_Mod->Interrupts != INT_NONE)
+    {
+        IntMasterEnable();
+        UARTIntRegister(Uart_Mod->Module, Uart_Mod->IntIRQ);
+        UARTIntEnable(Uart_Mod->Module, Uart_Mod->Interrupts);
+    }
+}
+
+/*
+ * Gets the status of the specified masked interrupts.
+ */
+
+uint32_t fUart_IntGet (fUart_Mod* const Uart_Mod)
+{
+#ifdef  DEBUG
+    ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
+#endif
+
+    return (UARTIntStatus(Uart_Mod->Module, true) & Uart_Mod->Interrupts);
+}
+
+/*
+ * Clears the specified interrupts.
+ */
+
+void fUart_IntClear (fUart_Mod* const Uart_Mod)
+{
+#ifdef  DEBUG
+    ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
+#endif
+
+    UARTIntClear(Uart_Mod->Module, Uart_Mod->Interrupts);
+}
+
+/*
+ * Sends the specified byte through the UART peripheral specified.
+ */
+
+void fUart_sendByte (fUart_Mod* const Uart_Mod)
+{
+#ifdef  DEBUG
+    ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
+#endif
+
+    UARTCharPut(Uart_Mod->Module, Uart_Mod->TxByte);
+}
+
+/*
+ * Gets current byte received on the UART interface.
+ */
+
+void fUart_receiveByte (fUart_Mod* Uart_Mod)
+{
+#ifdef  DEBUG
+    ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
+#endif
+
+    //Uart_Mod->RxByte = UARTCharGet(Uart_Mod->Module);
+}

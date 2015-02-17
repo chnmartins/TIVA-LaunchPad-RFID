@@ -27,6 +27,7 @@
 #include "functions_gpio.h"
 #include "hw_memmap.h"
 #include "uart.h"
+#include "conf.h"
 
 /* Exported types ------------------------------------------------------------*/
 
@@ -49,6 +50,10 @@ typedef struct
     uint32_t    Parity;
     uint32_t    ClockSource;
     uint32_t    BaudRate;
+    uint32_t    Interrupts;
+    void (*IntIRQ) (void);
+    uint8_t     TxByte;
+    uint8_t     RxByte;
 } fUart_Mod;
 
 /* Exported constants --------------------------------------------------------*/
@@ -69,6 +74,7 @@ typedef struct
 #define STOP_ONE    UART_CONFIG_STOP_ONE
 #define STOP_TWO    UART_CONFIG_STOP_TWO
 
+#define PAR_NONE    UART_CONFIG_PAR_NONE
 #define PAR_EVEN    UART_CONFIG_PAR_EVEN
 #define PAR_ODD     UART_CONFIG_PAR_ODD
 #define PAR_ONE     UART_CONFIG_PAR_ONE
@@ -93,6 +99,20 @@ typedef struct
 #define BR_460800       460800
 #define BR_921600       921600
 
+#define INT_NONE                0
+#define INT_9BIT                UART_INT_9BIT
+#define INT_OVERRUN_ERROR       UART_INT_OE
+#define INT_BREAK_ERROR         UART_INT_BE
+#define INT_PARITY_ERROR        UART_INT_PE
+#define INT_FRAMING_ERROR       UART_INT_FE
+#define INT_RECEIVE_TIMEOUT     UART_INT_RT
+#define INT_TRANSMIT            UART_INT_TX
+#define INT_RECEIVE             UART_INT_RX
+#define INT_DSR                 UART_INT_DSR
+#define INT_DCD                 UART_INT_DCD
+#define INT_CTS                 UART_INT_CTS
+#define INT_RI                  UART_INT_RI
+
 /* Exported macro ------------------------------------------------------------*/
 
 /* Exported functions --------------------------------------------------------*/
@@ -102,6 +122,12 @@ void fUart_DeInit (fUart_Mod* const Uart_Mod);
 void fUart_setConfig (fUart_Mod* const Uart_Mod);
 void fUart_Start (fUart_Mod* const Uart_Mod);
 void fUart_Init (fUart_Mod* const Uart_Mod);
+void fUart_IntInit (fUart_Mod* const Uart_Mod);
+uint32_t fUart_IntGet (fUart_Mod* const Uart_Mod);
+void fUart_IntClear (fUart_Mod* const Uart_Mod);
+
+void fUart_sendByte (fUart_Mod* const Uart_Mod);
+void fUart_receiveByte (fUart_Mod* Uart_Mod);
 
 
 #ifdef __cplusplus
