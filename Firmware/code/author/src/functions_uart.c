@@ -87,7 +87,7 @@
  * Function to enable the SysCtl clock.
  */
 
-void fUart_enableSysCtl (fUart_Mod* const Uart_Mod)
+void fUart_enableSysCtl (const fUart_Mod* Uart_Mod)
 {
 #ifdef  DEBUG
     ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
@@ -126,7 +126,7 @@ void fUart_enableSysCtl (fUart_Mod* const Uart_Mod)
  * Function to configure the GPIO pins to be managed by the UART hardware peripheral.
  */
 
-void fUart_setPins (fUart_Mod* const Uart_Mod)
+void fUart_setPins (const fUart_Mod* Uart_Mod)
 {
     fGpio_Pin Rx_Pin = {.Pin = Uart_Mod->Rx->Pin, \
                         .Port = Uart_Mod->Rx->Port, \
@@ -159,7 +159,7 @@ void fUart_setPins (fUart_Mod* const Uart_Mod)
  * Disable the UART peripheral.
  */
 
-void fUart_DeInit (fUart_Mod* const Uart_Mod)
+void fUart_DeInit (const fUart_Mod* Uart_Mod)
 {
 #ifdef  DEBUG
     ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
@@ -172,7 +172,7 @@ void fUart_DeInit (fUart_Mod* const Uart_Mod)
  * Configure the UART peripheral.
  */
 
-void fUart_setConfig (fUart_Mod* const Uart_Mod)
+void fUart_setConfig (const fUart_Mod* Uart_Mod)
 {
 #ifdef  DEBUG
     ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
@@ -200,7 +200,7 @@ void fUart_setConfig (fUart_Mod* const Uart_Mod)
  * Starts the specified UART peripheral.
  */
 
-void fUart_Start (fUart_Mod* const Uart_Mod)
+void fUart_Start (const fUart_Mod* Uart_Mod)
 {
 #ifdef  DEBUG
     ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
@@ -214,7 +214,7 @@ void fUart_Start (fUart_Mod* const Uart_Mod)
  * Function to initialize and start the UARt interface specified.
  */
 
-void fUart_Init (fUart_Mod* const Uart_Mod)
+void fUart_Init (const fUart_Mod* Uart_Mod)
 {
 #ifdef  DEBUG
     ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
@@ -240,7 +240,7 @@ void fUart_Init (fUart_Mod* const Uart_Mod)
  * NOTE: The IntIRQ parameter isn't checked, it depends on the user to give correct parameters.
  */
 
-void fUart_IntInit (fUart_Mod* const Uart_Mod)
+void fUart_IntInit (const fUart_Mod* Uart_Mod)
 {
 #ifdef  DEBUG
     ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
@@ -258,7 +258,7 @@ void fUart_IntInit (fUart_Mod* const Uart_Mod)
  * Gets the status of the specified masked interrupts.
  */
 
-uint32_t fUart_IntGet (fUart_Mod* const Uart_Mod)
+uint32_t fUart_IntGet (const fUart_Mod* Uart_Mod)
 {
 #ifdef  DEBUG
     ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
@@ -271,7 +271,7 @@ uint32_t fUart_IntGet (fUart_Mod* const Uart_Mod)
  * Clears the specified interrupts.
  */
 
-void fUart_IntClear (fUart_Mod* const Uart_Mod)
+void fUart_IntClear (const fUart_Mod* Uart_Mod)
 {
 #ifdef  DEBUG
     ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
@@ -284,7 +284,7 @@ void fUart_IntClear (fUart_Mod* const Uart_Mod)
  * Disables the specified interrupts.
  */
 
-void fUart_IntDisable (fUart_Mod* const Uart_Mod)
+void fUart_IntDisable (const fUart_Mod* Uart_Mod)
 {
 #ifdef  DEBUG
     ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
@@ -297,7 +297,7 @@ void fUart_IntDisable (fUart_Mod* const Uart_Mod)
  * Enables the specified interrupts.
  */
 
-void fUart_IntEnable (fUart_Mod* const Uart_Mod)
+void fUart_IntEnable (const fUart_Mod* Uart_Mod)
 {
 #ifdef  DEBUG
     ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
@@ -310,7 +310,7 @@ void fUart_IntEnable (fUart_Mod* const Uart_Mod)
  * Sends the specified byte through the UART peripheral specified.
  */
 
-void fUart_sendByte (fUart_Mod* const Uart_Mod)
+void fUart_sendByte (const fUart_Mod* Uart_Mod)
 {
 #ifdef  DEBUG
     ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));

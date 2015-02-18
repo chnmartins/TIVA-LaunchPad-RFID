@@ -14,8 +14,8 @@
   */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __C_HEADER_TEMPLATE_H
-#define __C_HEADER_TEMPLATE_H
+#ifndef __FUNCTIONS_UART_H
+#define __FUNCTIONS_UART_H
 
 #ifdef __cplusplus
  extern "C" {
@@ -116,18 +116,18 @@ typedef struct
 /* Exported macro ------------------------------------------------------------*/
 
 /* Exported functions --------------------------------------------------------*/
-void fUart_enableSysCtl (fUart_Mod* const Uart_Pin);
-void fUart_setPins (fUart_Mod* const Uart_Mod);
-void fUart_DeInit (fUart_Mod* const Uart_Mod);
-void fUart_setConfig (fUart_Mod* const Uart_Mod);
-void fUart_Start (fUart_Mod* const Uart_Mod);
-void fUart_Init (fUart_Mod* const Uart_Mod);
-void fUart_IntInit (fUart_Mod* const Uart_Mod);
-uint32_t fUart_IntGet (fUart_Mod* const Uart_Mod);
-void fUart_IntClear (fUart_Mod* const Uart_Mod);
-void fUart_IntDisable (fUart_Mod* const Uart_Mod);
-void fUart_IntEnable (fUart_Mod* const Uart_Mod);
-void fUart_sendByte (fUart_Mod* const Uart_Mod);
+void fUart_enableSysCtl (const fUart_Mod* Uart_Pin);
+void fUart_setPins (const fUart_Mod* Uart_Mod);
+void fUart_DeInit (const fUart_Mod* Uart_Mod);
+void fUart_setConfig (const fUart_Mod* Uart_Mod);
+void fUart_Start (const fUart_Mod* Uart_Mod);
+void fUart_Init (const fUart_Mod* Uart_Mod);
+void fUart_IntInit (const fUart_Mod* Uart_Mod);
+uint32_t fUart_IntGet (const fUart_Mod* Uart_Mod);
+void fUart_IntClear (const fUart_Mod* Uart_Mod);
+void fUart_IntDisable (const fUart_Mod* Uart_Mod);
+void fUart_IntEnable (const fUart_Mod* Uart_Mod);
+void fUart_sendByte (const fUart_Mod* Uart_Mod);
 void fUart_receiveByte (fUart_Mod* Uart_Mod);
 
 
@@ -135,5 +135,5 @@ void fUart_receiveByte (fUart_Mod* Uart_Mod);
 }
 #endif
 
-#endif /*__C_HEADER_TEMPLATE_H */
+#endif /*__FUNCTIONS_UART_H */
  
