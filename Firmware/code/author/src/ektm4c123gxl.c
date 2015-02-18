@@ -20,6 +20,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include <stdlib.h>
 #include <stddef.h>
+#include <stdbool.h>
 #include "ektm4c123gxl.h"
 #include "functions_gpio.h"
 #include "functions_uart.h"
@@ -55,8 +56,7 @@
 /* Private macro -------------------------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
-uint8_t* RxBuf;
-uint8_t* TxBuf;
+fUart_Mod* UartDbg;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -225,126 +225,62 @@ uint8_t brd_PushButtonGetInt (uint8_t PBx)
  * Initializes the specified UART interface.
  */
 
-void brd_UartInit (uint8_t UARTx, void (*IntIRQ) (void))
+bool brd_UartInit (uint8_t UARTx)
 {
-    fUart_Pin Rx, Tx;
-    fUart_Mod Mod;
-
     switch (UARTx)
     {
     case UARTDBG:
-        RxBuf = (uint8_t*) calloc(UARTDBG_RXBUF_SIZE, sizeof(uint8_t));
-        TxBuf = (uint8_t*) calloc(UARTDBG_TXBUF_SIZE, sizeof(uint8_t));
+    	UartDbg = (fUart_Mod*) calloc (1, sizeof(fUart_Mod));
+    	if (UartDbg == (fUart_Mod*) NULL)
+    		return false;
 
-        Rx.Pin = UARTDBG_RX_PIN;
-        Rx.Port = UARTDBG_RX_PORT;
-        Rx.AlternateFunction = UARTDBG_RX_AF;
-        Rx.Current = CURR_2MA;
-        Rx.Type = TYPE_PP_PD;
+        UartDbg->Rx->Pin = UARTDBG_RX_PIN;
+        UartDbg->Rx->Port = UARTDBG_RX_PORT;
+        UartDbg->Rx->AlternateFunction = UARTDBG_RX_AF;
+        UartDbg->Rx->Current = CURR_2MA;
+        UartDbg->Rx->Type = TYPE_PP_PD;
 
-        Tx.Pin = UARTDBG_TX_PIN;
-        Tx.Port = UARTDBG_TX_PORT;
-        Tx.AlternateFunction = UARTDBG_TX_AF;
-        Tx.Current = CURR_2MA;
-        Tx.Type = TYPE_PP_PD;
+        UartDbg->Tx->Pin = UARTDBG_TX_PIN;
+        UartDbg->Tx->Port = UARTDBG_TX_PORT;
+        UartDbg->Tx->AlternateFunction = UARTDBG_TX_AF;
+        UartDbg->Tx->Current = CURR_2MA;
+        UartDbg->Tx->Type = TYPE_PP_PD;
 
-        Mod.Module = MOD_UART0;
-        Mod.Rx = &Rx;
-        Mod.Tx = &Tx;
-        Mod.ClockSource = CLK_SYSTEM;
-        Mod.Parity = PAR_NONE;
-        Mod.Stop = STOP_ONE;
-        Mod.Wlen = WLEN_EIGTH;
-        Mod.BaudRate = BR_115200;
-        Mod.Interrupts = INT_RECEIVE | INT_TRANSMIT | INT_OVERRUN_ERROR | INT_BREAK_ERROR | INT_PARITY_ERROR | INT_FRAMING_ERROR | INT_RECEIVE_TIMEOUT;
-        Mod.IntIRQ = IntIRQ;
-        break;
+        UartDbg->Module = MOD_UART0;
+        UartDbg->ClockSource = CLK_SYSTEM;
+        UartDbg->Parity = PAR_NONE;
+        UartDbg->Stop = STOP_ONE;
+        UartDbg->Wlen = WLEN_EIGTH;
+        UartDbg->BaudRate = BR_115200;
+
+        UartDbg->Interrupts = INT_RECEIVE | INT_TRANSMIT | INT_OVERRUN_ERROR | INT_BREAK_ERROR | INT_PARITY_ERROR | INT_FRAMING_ERROR | INT_RECEIVE_TIMEOUT;
+        UartDbg->IntIRQ = brd_UartDbgISR;
+
+        UartDbg->RxBuf = (uint8_t*) calloc(UARTDBG_RXBUF_SIZE, sizeof(uint8_t));
+        if (UartDbg->RxBuf == NULL)
+        	return false;
+        UartDbg->RxBufIndex = 0;
+        UartDbg->RxBufLength = UARTDBG_RXBUF_SIZE;
+
+        UartDbg->TxBuf = (uint8_t*) calloc(UARTDBG_TXBUF_SIZE, sizeof(uint8_t));
+        if (UartDbg->TxBuf == NULL)
+        	return false;
+        UartDbg->TxBufIndex = 0;
+        UartDbg->TxBufLength = UARTDBG_TXBUF_SIZE;
+
+        fUart_Init(UartDbg);
+
+        return true;
+    default:
+    	return false;
     }
-
-    fUart_Init(&Mod);
 }
 
 /*
- * Default IRQ handler for the UART Peripheral.
+ * Interrupt Service Routine for the UART Debug interface.
  */
 
-void brd_UartDbgDefIRQHandler (void)
+void brd_UartDbgISR (void)
 {
-    static uint8_t tx_index = 0;
-    static uint8_t rx_index = 0;
-    fUart_Mod tempe = {.Module = MOD_UART0, .Interrupts = INT_RECEIVE | INT_TRANSMIT | INT_OVERRUN_ERROR | INT_BREAK_ERROR | INT_PARITY_ERROR | INT_FRAMING_ERROR | INT_RECEIVE_TIMEOUT};
-    uint32_t val;
-
-    val = fUart_IntGet(&tempe);
-
-    if (val & INT_RECEIVE)
-    {
-        fUart_receiveByte(&tempe);
-        *(RxBuf + rx_index) = tempe.RxByte;
-
-        if (++rx_index >= UARTDBG_RXBUF_SIZE)
-            rx_index = 0;
-    }
-    if (val & INT_TRANSMIT)
-    {
-        tempe.TxByte = *(TxBuf + tx_index);
-
-        if (tempe.TxByte)
-        {
-            fUart_sendByte(&tempe);
-            *(TxBuf + tx_index) = 0;
-
-            if (++tx_index >= UARTDBG_TXBUF_SIZE)
-                tx_index = 0;
-        }
-        else
-        {
-            tempe.Interrupts = INT_TRANSMIT;
-            fUart_IntDisable(&tempe);
-        }
-    }
-    if (val & INT_OVERRUN_ERROR)
-    {
-
-    }
-    if (val & INT_BREAK_ERROR)
-    {
-
-    }
-    if (val & INT_PARITY_ERROR)
-    {
-
-    }
-    if (val & INT_FRAMING_ERROR)
-    {
-
-    }
-    if (val & INT_RECEIVE_TIMEOUT)
-    {
-
-    }
-
-    tempe.Interrupts = val;
-    fUart_IntClear(&tempe);
-}
-
-/*
- * Transmits data over the UARTDBG peripheral.
- */
-
-void brd_UartDbgDefTransmit (uint8_t* string)
-{
-    static uint8_t tx_index = 0;
-    fUart_Mod tempe = {.Module = MOD_UART0, .Interrupts = INT_TRANSMIT, .TxByte = 0x30};
-
-    while (*string)
-    {
-        while (*(TxBuf + tx_index));
-        *(TxBuf + tx_index++) = *(string++);
-        if (tx_index >= UARTDBG_TXBUF_SIZE)
-            tx_index = 0;
-    }
-
-    fUart_IntEnable(&tempe);
-    fUart_sendByte(&tempe);
+	fUart_IRQHandler(UartDbg);
 }

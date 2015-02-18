@@ -74,12 +74,7 @@ int main (void)
 
     brd_LedInteract(LEDG | LEDR | LEDB, LED_OFF);
 
-    brd_UartInit(UARTDBG, brd_UartDbgDefIRQHandler);
-
-    brd_UartDbgDefTransmit("How are you?\n");
-    brd_UartDbgDefTransmit("Oh, I'm doing fine.\n");
-    brd_UartDbgDefTransmit("Those are good news.\n");
-    brd_UartDbgDefTransmit("And you, how are you doing?\n");
+    brd_UartInit(UARTDBG);
 
 	while (1)
 	{

@@ -268,66 +268,91 @@ uint32_t fUart_IntGet (const fUart_Mod* Uart_Mod)
 }
 
 /*
- * Clears the specified interrupts.
+ * Function to call on the IRQ handler of the UART interface.
  */
 
-void fUart_IntClear (const fUart_Mod* Uart_Mod)
+void fUart_IRQHandler (fUart_Mod* Uart_Mod)
 {
-#ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
-#endif
+    uint32_t val;
 
-    UARTIntClear(Uart_Mod->Module, Uart_Mod->Interrupts);
+    val = fUart_IntGet(Uart_Mod);
+
+    if (val & INT_9BIT)
+    {
+
+    	UARTIntClear(Uart_Mod->Module, INT_9BIT);
+    }
+    if (val & INT_OVERRUN_ERROR)
+    {
+
+    	UARTIntClear(Uart_Mod->Module, INT_OVERRUN_ERROR);
+    }
+    if (val & INT_BREAK_ERROR)
+    {
+
+    	UARTIntClear(Uart_Mod->Module, INT_BREAK_ERROR);
+    }
+    if (val & INT_PARITY_ERROR)
+    {
+
+    	UARTIntClear(Uart_Mod->Module, INT_PARITY_ERROR);
+    }
+    if (val & INT_FRAMING_ERROR)
+    {
+
+    	UARTIntClear(Uart_Mod->Module, INT_FRAMING_ERROR);
+    }
+    if (val & INT_RECEIVE_TIMEOUT)
+    {
+
+    	UARTIntClear(Uart_Mod->Module, INT_RECEIVE_TIMEOUT);
+    }
+    if (val & INT_TRANSMIT)
+    {
+    	if (Uart_Mod->TxBufIndex < Uart_Mod->TxBufLength)
+    	{
+    		UARTCharPut(Uart_Mod->Module, *(Uart_Mod->TxBuf + Uart_Mod->TxBufIndex));
+    		(Uart_Mod->TxBufIndex)++;
+    	}
+    	else
+    	{
+    		UARTIntDisable(Uart_Mod->Module, INT_TRANSMIT);
+    	}
+
+    	UARTIntClear(Uart_Mod->Module, INT_TRANSMIT);
+    }
+    if (val & INT_RECEIVE)
+    {
+    	if (Uart_Mod->RxBufIndex < Uart_Mod->RxBufLength)
+    	{
+    		*(Uart_Mod->RxBuf + Uart_Mod->RxBufIndex) = UARTCharGet(Uart_Mod->Module);
+    		(Uart_Mod->RxBufIndex)++;
+    	}
+
+    	UARTIntClear(Uart_Mod->Module, INT_RECEIVE);
+    }
+    if (val & INT_DSR)
+    {
+
+    	UARTIntClear(Uart_Mod->Module, INT_DSR);
+    }
+    if (val & INT_DCD)
+    {
+
+    	UARTIntClear(Uart_Mod->Module, INT_DCD);
+    }
+    if (val & INT_CTS)
+    {
+
+    	UARTIntClear(Uart_Mod->Module, INT_CTS);
+    }
+    if (val & INT_RI)
+    {
+
+    	UARTIntClear(Uart_Mod->Module, INT_RI);
+    }
 }
 
 /*
- * Disables the specified interrupts.
+ *
  */
-
-void fUart_IntDisable (const fUart_Mod* Uart_Mod)
-{
-#ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
-#endif
-
-    UARTIntDisable(Uart_Mod->Module, Uart_Mod->Interrupts);
-}
-
-/*
- * Enables the specified interrupts.
- */
-
-void fUart_IntEnable (const fUart_Mod* Uart_Mod)
-{
-#ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
-#endif
-
-    UARTIntEnable(Uart_Mod->Module, Uart_Mod->Interrupts);
-}
-
-/*
- * Sends the specified byte through the UART peripheral specified.
- */
-
-void fUart_sendByte (const fUart_Mod* Uart_Mod)
-{
-#ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
-#endif
-
-    UARTCharPut(Uart_Mod->Module, Uart_Mod->TxByte);
-}
-
-/*
- * Gets current byte received on the UART interface.
- */
-
-void fUart_receiveByte (fUart_Mod* Uart_Mod)
-{
-#ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
-#endif
-
-    Uart_Mod->RxByte = UARTCharGet(Uart_Mod->Module);
-}

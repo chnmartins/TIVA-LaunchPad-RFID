@@ -52,8 +52,14 @@ typedef struct
     uint32_t    BaudRate;
     uint32_t    Interrupts;
     void (*IntIRQ) (void);
-    uint8_t     TxByte;
-    uint8_t     RxByte;
+
+    uint8_t*     TxBuf;
+    uint8_t		 TxBufLength;
+    uint8_t		 TxBufIndex;
+
+    uint8_t* 	 RxBuf;
+    uint8_t		 RxBufLength;
+    uint8_t		 RxBufIndex;
 } fUart_Mod;
 
 /* Exported constants --------------------------------------------------------*/
@@ -124,11 +130,7 @@ void fUart_Start (const fUart_Mod* Uart_Mod);
 void fUart_Init (const fUart_Mod* Uart_Mod);
 void fUart_IntInit (const fUart_Mod* Uart_Mod);
 uint32_t fUart_IntGet (const fUart_Mod* Uart_Mod);
-void fUart_IntClear (const fUart_Mod* Uart_Mod);
-void fUart_IntDisable (const fUart_Mod* Uart_Mod);
-void fUart_IntEnable (const fUart_Mod* Uart_Mod);
-void fUart_sendByte (const fUart_Mod* Uart_Mod);
-void fUart_receiveByte (fUart_Mod* Uart_Mod);
+void fUart_IRQHandler (fUart_Mod* Uart_Mod);
 
 
 #ifdef __cplusplus
