@@ -55,11 +55,13 @@ typedef struct
 
     uint8_t*     TxBuf;
     uint8_t		 TxBufLength;
-    uint8_t		 TxBufIndex;
+    uint8_t		 TxBufProcIndex;
+    uint8_t      TxBufUnprocIndex;
 
     uint8_t* 	 RxBuf;
     uint8_t		 RxBufLength;
-    uint8_t		 RxBufIndex;
+    uint8_t		 RxBufProcIndex;
+    uint8_t      RxBufUnprocIndex;
 } fUart_Mod;
 
 /* Exported constants --------------------------------------------------------*/
@@ -131,6 +133,7 @@ void fUart_Init (const fUart_Mod* Uart_Mod);
 void fUart_IntInit (const fUart_Mod* Uart_Mod);
 uint32_t fUart_IntGet (const fUart_Mod* Uart_Mod);
 void fUart_IRQHandler (fUart_Mod* Uart_Mod);
+bool fUart_BeginTransfer (fUart_Mod* Uart_Mod, const uint8_t* data, uint8_t length);
 
 
 #ifdef __cplusplus

@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <string.h>
 #include "ektm4c123gxl.h"
 #include "functions_gpio.h"
 #include "functions_uart.h"
@@ -50,8 +51,9 @@
 #define UARTDBG_TX_PORT GPIO_PORTA_BASE
 #define UARTDBG_TX_AF   GPIO_PA1_U0TX
 
-#define UARTDBG_RXBUF_SIZE   30
-#define UARTDBG_TXBUF_SIZE   30
+#define UARTDBG_RXBUF_SIZE   50
+#define UARTDBG_TXBUF_SIZE   50
+#define UARTDBG_CMD_DELIMITER   '\n'
 
 /* Private macro -------------------------------------------------------------*/
 
@@ -233,6 +235,12 @@ bool brd_UartInit (uint8_t UARTx)
     	UartDbg = (fUart_Mod*) calloc (1, sizeof(fUart_Mod));
     	if (UartDbg == (fUart_Mod*) NULL)
     		return false;
+    	UartDbg->Rx = (fUart_Pin*) calloc(1, sizeof(fUart_Pin));
+        if (UartDbg->Rx == (fUart_Pin*) NULL)
+            return false;
+    	UartDbg->Tx = (fUart_Pin*) calloc(1, sizeof(fUart_Pin));
+        if (UartDbg->Tx == (fUart_Pin*) NULL)
+            return false;
 
         UartDbg->Rx->Pin = UARTDBG_RX_PIN;
         UartDbg->Rx->Port = UARTDBG_RX_PORT;
@@ -259,13 +267,15 @@ bool brd_UartInit (uint8_t UARTx)
         UartDbg->RxBuf = (uint8_t*) calloc(UARTDBG_RXBUF_SIZE, sizeof(uint8_t));
         if (UartDbg->RxBuf == NULL)
         	return false;
-        UartDbg->RxBufIndex = 0;
+        UartDbg->RxBufProcIndex = 0;
+        UartDbg->RxBufUnprocIndex = 0;
         UartDbg->RxBufLength = UARTDBG_RXBUF_SIZE;
 
         UartDbg->TxBuf = (uint8_t*) calloc(UARTDBG_TXBUF_SIZE, sizeof(uint8_t));
         if (UartDbg->TxBuf == NULL)
         	return false;
-        UartDbg->TxBufIndex = 0;
+        UartDbg->TxBufProcIndex = 0;
+        UartDbg->TxBufUnprocIndex = 0;
         UartDbg->TxBufLength = UARTDBG_TXBUF_SIZE;
 
         fUart_Init(UartDbg);
@@ -283,4 +293,87 @@ bool brd_UartInit (uint8_t UARTx)
 void brd_UartDbgISR (void)
 {
 	fUart_IRQHandler(UartDbg);
+}
+
+/*
+ * Sends data over the UART interface.
+ */
+
+void brd_UartSend (uint8_t UARTx, const uint8_t* data)
+{
+    uint8_t length = 0;
+
+    switch (UARTx)
+    {
+    case UARTDBG:
+        length = 0;
+
+        while (*(data++))
+            length++;
+
+        fUart_BeginTransfer(UartDbg, data - length - 1, length);
+
+        break;
+    default:
+
+
+        break;
+    }
+}
+
+/*
+ * Parses the data received on the specified UART interface.
+ */
+
+void brd_UartParse (uint8_t UARTx)
+{
+    uint8_t RxBufIndex;
+    uint8_t CmdIndex;
+    uint8_t Cmd[20];
+
+    switch (UARTx)
+    {
+    case UARTDBG:
+        RxBufIndex = UartDbg->RxBufProcIndex;
+        CmdIndex = 0;
+        memset(Cmd, 0x00, sizeof(Cmd) * sizeof(uint8_t));
+
+        while (RxBufIndex != UartDbg->RxBufUnprocIndex)
+        {
+            if (CmdIndex < sizeof(Cmd) / sizeof(uint8_t))
+            {
+                *(Cmd + CmdIndex) = *(UartDbg->RxBuf + RxBufIndex++);
+                if (RxBufIndex >= UartDbg->RxBufLength)
+                    RxBufIndex = 0;
+
+                if (*(Cmd + CmdIndex) == UARTDBG_CMD_DELIMITER)
+                {
+                    if (!(strcmp((char*) Cmd, "HELLO\r\n")))
+                    {
+                        brd_LedInteract(LEDR, LED_TOGGLE);
+                        brd_UartSend(UARTDBG, "HAHAHAHAHA\r\n");
+                    } else {
+                        brd_UartSend(UARTDBG, "UNRECOGNIZED CMD\r\n");
+                    }
+
+                    UartDbg->RxBufProcIndex = RxBufIndex;
+                    CmdIndex = 0;
+                    memset(Cmd, 0x00, sizeof(Cmd) * sizeof(uint8_t));
+                }
+                else
+                {
+                    CmdIndex++;
+                }
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        break;
+    default:
+
+        break;
+    }
 }

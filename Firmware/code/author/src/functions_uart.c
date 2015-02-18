@@ -309,25 +309,26 @@ void fUart_IRQHandler (fUart_Mod* Uart_Mod)
     }
     if (val & INT_TRANSMIT)
     {
-    	if (Uart_Mod->TxBufIndex < Uart_Mod->TxBufLength)
-    	{
-    		UARTCharPut(Uart_Mod->Module, *(Uart_Mod->TxBuf + Uart_Mod->TxBufIndex));
-    		(Uart_Mod->TxBufIndex)++;
-    	}
-    	else
-    	{
-    		UARTIntDisable(Uart_Mod->Module, INT_TRANSMIT);
-    	}
+        if (Uart_Mod->TxBufProcIndex != Uart_Mod->TxBufUnprocIndex)
+        {
+            UARTCharPut(Uart_Mod->Module, *(Uart_Mod->TxBuf + Uart_Mod->TxBufProcIndex++));
+
+            if (Uart_Mod->TxBufProcIndex >= Uart_Mod->TxBufLength)
+                Uart_Mod->TxBufProcIndex = 0;
+        }
+        else
+        {
+            UARTIntDisable(Uart_Mod->Module, INT_TRANSMIT);
+        }
 
     	UARTIntClear(Uart_Mod->Module, INT_TRANSMIT);
     }
     if (val & INT_RECEIVE)
     {
-    	if (Uart_Mod->RxBufIndex < Uart_Mod->RxBufLength)
-    	{
-    		*(Uart_Mod->RxBuf + Uart_Mod->RxBufIndex) = UARTCharGet(Uart_Mod->Module);
-    		(Uart_Mod->RxBufIndex)++;
-    	}
+        *(Uart_Mod->RxBuf + Uart_Mod->RxBufUnprocIndex++) = UARTCharGet(Uart_Mod->Module);
+
+        if (Uart_Mod->RxBufUnprocIndex >= Uart_Mod->RxBufLength)
+            Uart_Mod->RxBufUnprocIndex = 0;
 
     	UARTIntClear(Uart_Mod->Module, INT_RECEIVE);
     }
@@ -354,5 +355,30 @@ void fUart_IRQHandler (fUart_Mod* Uart_Mod)
 }
 
 /*
- *
+ * Transmits the specified data over on TxBuf over the specified interface.
  */
+
+bool fUart_BeginTransfer (fUart_Mod* Uart_Mod, const uint8_t* data, uint8_t length)
+{
+#ifdef  DEBUG
+    ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
+#endif
+
+    if (length >= Uart_Mod->TxBufLength)
+        return false;
+
+    while (Uart_Mod->TxBufProcIndex != Uart_Mod->TxBufUnprocIndex);
+
+    while (length--) {
+        *(Uart_Mod->TxBuf + Uart_Mod->TxBufUnprocIndex++) = *(data++);
+
+
+        if (Uart_Mod->TxBufUnprocIndex >= Uart_Mod->TxBufLength)
+            Uart_Mod->TxBufUnprocIndex = 0;
+    }
+
+    UARTCharPut(Uart_Mod->Module, 0);
+    UARTIntEnable(Uart_Mod->Module, INT_TRANSMIT);
+
+    return true;
+}
