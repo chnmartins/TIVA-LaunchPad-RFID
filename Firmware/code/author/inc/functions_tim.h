@@ -50,6 +50,7 @@ typedef struct
 #define TYPE_PERIODIC_DOWN      TIMER_CFG_PERIODIC
 #define TYPE_RTC                TIMER_CFG_RTC
 
+#define INT_NONE            0
 #define INT_TIMEOUT         TIMER_TIMA_TIMEOUT
 // TODO: Complete with the rest of the interrupts here.
 
@@ -62,6 +63,7 @@ void fTim_setTime (const fTim_Mod* Tim_Mod);
 void fTim_IntInit(const fTim_Mod* Tim_Mod);
 void fTim_Start(const fTim_Mod* Tim_Mod);
 void fTim_Init (const fTim_Mod* Tim_Mod);
+bool fTim_IsTimeout (const fTim_Mod* Tim_Mod);
 
 #ifdef __cplusplus
 }

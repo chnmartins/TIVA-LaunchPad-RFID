@@ -127,8 +127,11 @@ void fTim_IntInit(const fTim_Mod* Tim_Mod)
     ASSERT_PARAM(ASSERT_TIM_MODULE(Tim_Mod->Module));
 #endif
 
-    TimerIntRegister(Tim_Mod->Module, Tim_Mod->Int, Tim_Mod->IntIRQ);
-    TimerIntEnable(Tim_Mod->Module, Tim_Mod->Int);
+    if (Tim_Mod->Int != INT_NONE)
+    {
+        TimerIntRegister(Tim_Mod->Module, Tim_Mod->Int, Tim_Mod->IntIRQ);
+        TimerIntEnable(Tim_Mod->Module, Tim_Mod->Int);
+    }
 }
 
 /*
@@ -168,10 +171,33 @@ void fTim_Init (const fTim_Mod* Tim_Mod)
 
 void fTim_IRQ (const fTim_Mod* Tim_Mod)
 {
+#ifdef DEBUG
+    ASSERT_PARAM(ASSERT_TIM_MODULE(Tim_Mod->Module));
+#endif
+
     uint32_t val = TimerIntStatus(Tim_Mod->Module, Tim_Mod->Int);
 
     if (val & INT_TIMEOUT)
     {
         TimerIntClear(Tim_Mod->Module, INT_TIMEOUT);
     }
+}
+
+/*
+ * Returns true if the specified timer has reached a timeout.
+ */
+
+bool fTim_IsTimeout (const fTim_Mod* Tim_Mod)
+{
+#ifdef DEBUG
+    ASSERT_PARAM(ASSERT_TIM_MODULE(Tim_Mod->Module));
+#endif
+
+    if (TimerIntStatus(Tim_Mod->Module, false) & INT_TIMEOUT)
+    {
+        TimerIntClear(Tim_Mod->Module, INT_TIMEOUT);
+        return true;
+    }
+
+    return false;
 }

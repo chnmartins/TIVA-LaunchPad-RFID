@@ -71,7 +71,6 @@ int main (void)
     brd_LedInit(LEDG | LEDR | LEDB);
     brd_PushButtonInit(PB1 | PB2);
     brd_PushButtonInitInt(PB1 | PB2, IRQHandler);
-    brd_TimInit();
 
     brd_LedInteract(LEDG | LEDR | LEDB, LED_OFF);
 
@@ -80,5 +79,7 @@ int main (void)
 	while (1)
 	{
 	    brd_UartParse(UARTDBG);
+	    brd_delay(1);
+	    brd_LedInteract(LEDR, LED_TOGGLE);
 	}
 }

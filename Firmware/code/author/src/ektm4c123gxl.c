@@ -383,28 +383,15 @@ void brd_UartParse (uint8_t UARTx)
 }
 
 /*
- *
- */
-fTim_Mod Tim;
-
-void brd_TimInit (void)
-{
-
-    Tim.Module = MOD_TIM0;
-    Tim.Type = TYPE_PERIODIC_UP;
-    Tim.sTime = 0.1;
-    Tim.Int = INT_TIMEOUT;
-    Tim.IntIRQ = test;
-
-    fTim_Init(&Tim);
-}
-
-/*
- *
+ * Causes a delay and stops the flow execution till it finishes.
  */
 
-void test (void)
+void brd_delay (double sTime)
 {
-    fTim_IRQ(&Tim);
-    brd_LedInteract(LEDR, LED_TOGGLE);
+    fTim_Mod Tim_Mod = {.Module = MOD_TIM0, .Type = TYPE_ONE_SHOT_DOWN, .sTime = sTime, .Int = INT_NONE};
+
+    fTim_Init(&Tim_Mod);
+
+    while (!(fTim_IsTimeout(&Tim_Mod)));
+
 }
