@@ -18,8 +18,14 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
+#include <stdlib.h>
+#include <stddef.h>
+#include <stdbool.h>
+#include <string.h>
 #include "ektm4c123gxl.h"
 #include "functions_gpio.h"
+#include "functions_uart.h"
+#include "pin_map.h"
 #include "conf.h"
 
 /* Private typedef -----------------------------------------------------------*/
@@ -37,9 +43,26 @@
 #define PB2_PIN      GPIO_PIN_0
 #define PB2_PORT     GPIO_PORTF_BASE
 
+#define UARTDBG_RX_PIN  GPIO_PIN_0
+#define UARTDBG_RX_PORT GPIO_PORTA_BASE
+#define UARTDBG_RX_AF   GPIO_PA0_U0RX
+
+#define UARTDBG_TX_PIN  GPIO_PIN_1
+#define UARTDBG_TX_PORT GPIO_PORTA_BASE
+#define UARTDBG_TX_AF   GPIO_PA1_U0TX
+
+#define UARTDBG_RXBUF_SIZE   50
+#define UARTDBG_TXBUF_SIZE   50
+
+#define UARTDBG_CMD_DELIMITER   '\n'
+#define UARTDBG_CMD_HELLO       "Are you there?\r\n"
+#define UARTDBG_CMD_HEY         "Yes, I'm here.\r\n"
+#define UARTDBG_CMD_UNKNOWN     "I have no idea what you are talking about.\r\n"
+
 /* Private macro -------------------------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
+fUart_Mod* UartDbg;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -202,4 +225,158 @@ uint8_t brd_PushButtonGetInt (uint8_t PBx)
     }
 
     return val;
+}
+
+/*
+ * Initializes the specified UART interface.
+ */
+
+bool brd_UartInit (uint8_t UARTx)
+{
+    switch (UARTx)
+    {
+    case UARTDBG:
+    	UartDbg = (fUart_Mod*) calloc (1, sizeof(fUart_Mod));
+    	if (UartDbg == (fUart_Mod*) NULL)
+    		return false;
+    	UartDbg->Rx = (fUart_Pin*) calloc(1, sizeof(fUart_Pin));
+        if (UartDbg->Rx == (fUart_Pin*) NULL)
+            return false;
+    	UartDbg->Tx = (fUart_Pin*) calloc(1, sizeof(fUart_Pin));
+        if (UartDbg->Tx == (fUart_Pin*) NULL)
+            return false;
+
+        UartDbg->Rx->Pin = UARTDBG_RX_PIN;
+        UartDbg->Rx->Port = UARTDBG_RX_PORT;
+        UartDbg->Rx->AlternateFunction = UARTDBG_RX_AF;
+        UartDbg->Rx->Current = CURR_2MA;
+        UartDbg->Rx->Type = TYPE_PP_PD;
+
+        UartDbg->Tx->Pin = UARTDBG_TX_PIN;
+        UartDbg->Tx->Port = UARTDBG_TX_PORT;
+        UartDbg->Tx->AlternateFunction = UARTDBG_TX_AF;
+        UartDbg->Tx->Current = CURR_2MA;
+        UartDbg->Tx->Type = TYPE_PP_PD;
+
+        UartDbg->Module = MOD_UART0;
+        UartDbg->ClockSource = CLK_SYSTEM;
+        UartDbg->Parity = PAR_NONE;
+        UartDbg->Stop = STOP_ONE;
+        UartDbg->Wlen = WLEN_EIGTH;
+        UartDbg->BaudRate = BR_115200;
+
+        UartDbg->Interrupts = INT_RECEIVE | INT_TRANSMIT | INT_OVERRUN_ERROR | INT_BREAK_ERROR | INT_PARITY_ERROR | INT_FRAMING_ERROR | INT_RECEIVE_TIMEOUT;
+        UartDbg->IntIRQ = brd_UartDbgISR;
+
+        UartDbg->RxBuf = (uint8_t*) calloc(UARTDBG_RXBUF_SIZE, sizeof(uint8_t));
+        if (UartDbg->RxBuf == NULL)
+        	return false;
+        UartDbg->RxBufProcIndex = 0;
+        UartDbg->RxBufUnprocIndex = 0;
+        UartDbg->RxBufLength = UARTDBG_RXBUF_SIZE;
+
+        UartDbg->TxBuf = (uint8_t*) calloc(UARTDBG_TXBUF_SIZE, sizeof(uint8_t));
+        if (UartDbg->TxBuf == NULL)
+        	return false;
+        UartDbg->TxBufProcIndex = 0;
+        UartDbg->TxBufUnprocIndex = 0;
+        UartDbg->TxBufLength = UARTDBG_TXBUF_SIZE;
+
+        fUart_Init(UartDbg);
+
+        return true;
+    default:
+    	return false;
+    }
+}
+
+/*
+ * Interrupt Service Routine for the UART Debug interface.
+ */
+
+void brd_UartDbgISR (void)
+{
+	fUart_IRQHandler(UartDbg);
+}
+
+/*
+ * Sends data over the UART interface.
+ */
+
+void brd_UartSend (uint8_t UARTx, const uint8_t* data)
+{
+    uint8_t length = 0;
+
+    switch (UARTx)
+    {
+    case UARTDBG:
+        length = 0;
+
+        while (*(data++))
+            length++;
+
+        fUart_BeginTransfer(UartDbg, data - length - 1, length);
+
+        break;
+    default:
+
+
+        break;
+    }
+}
+
+/*
+ * Parses the data received on the specified UART interface.
+ */
+
+void brd_UartParse (uint8_t UARTx)
+{
+    uint8_t RxBufIndex;
+    uint8_t CmdIndex;
+    uint8_t Cmd[20];
+
+    switch (UARTx)
+    {
+    case UARTDBG:
+        RxBufIndex = UartDbg->RxBufProcIndex;
+        CmdIndex = 0;
+        memset(Cmd, 0x00, sizeof(Cmd) * sizeof(uint8_t));
+
+        while (RxBufIndex != UartDbg->RxBufUnprocIndex)
+        {
+            if (CmdIndex < sizeof(Cmd) / sizeof(uint8_t))
+            {
+                *(Cmd + CmdIndex) = *(UartDbg->RxBuf + RxBufIndex++);
+                if (RxBufIndex >= UartDbg->RxBufLength)
+                    RxBufIndex = 0;
+
+                if (*(Cmd + CmdIndex) == UARTDBG_CMD_DELIMITER)
+                {
+                    if (!(strcmp((char*) Cmd, UARTDBG_CMD_HELLO)))
+                    {
+                        brd_UartSend(UARTDBG, UARTDBG_CMD_HEY);
+                    } else {
+                        brd_UartSend(UARTDBG, UARTDBG_CMD_UNKNOWN);
+                    }
+
+                    UartDbg->RxBufProcIndex = RxBufIndex;
+                    CmdIndex = 0;
+                    memset(Cmd, 0x00, sizeof(Cmd) * sizeof(uint8_t));
+                }
+                else
+                {
+                    CmdIndex++;
+                }
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        break;
+    default:
+
+        break;
+    }
 }

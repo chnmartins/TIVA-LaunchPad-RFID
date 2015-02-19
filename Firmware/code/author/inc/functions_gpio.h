@@ -34,6 +34,7 @@ typedef struct
 	uint32_t	Port;
 	uint32_t    Direction;
 	uint32_t	Current;
+	uint32_t    AlternateFunction;
 	uint32_t	Type;
 	uint32_t    IntType;
 	void (*IntIRQ) (void);
@@ -111,6 +112,7 @@ void fGpio_Init (fGpio_Pin* const Gpio_Pin);
 void fGpio_IntInit (fGpio_Pin* const Gpio_Pin);
 uint32_t fGpio_IntGet (fGpio_Pin* const Gpio_Pin);
 void fGpio_IntClear (fGpio_Pin* const Gpio_Pin);
+void fGpio_setAlternateFunction (fGpio_Pin* const Gpio_Pin);
 
 #ifdef __cplusplus
 }
