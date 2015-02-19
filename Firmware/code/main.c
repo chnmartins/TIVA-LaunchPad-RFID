@@ -79,5 +79,7 @@ int main (void)
 	while (1)
 	{
 	    brd_UartParse(UARTDBG);
+	    brd_delay(1);
+	    brd_LedInteract(LEDR, LED_TOGGLE);
 	}
 }

@@ -25,6 +25,7 @@
 #include "ektm4c123gxl.h"
 #include "functions_gpio.h"
 #include "functions_uart.h"
+#include "functions_tim.h"
 #include "pin_map.h"
 #include "conf.h"
 
@@ -379,4 +380,18 @@ void brd_UartParse (uint8_t UARTx)
 
         break;
     }
+}
+
+/*
+ * Causes a delay and stops the flow execution till it finishes.
+ */
+
+void brd_delay (double sTime)
+{
+    fTim_Mod Tim_Mod = {.Module = MOD_TIM0, .Type = TYPE_ONE_SHOT_DOWN, .sTime = sTime, .Int = INT_NONE};
+
+    fTim_Init(&Tim_Mod);
+
+    while (!(fTim_IsTimeout(&Tim_Mod)));
+
 }
