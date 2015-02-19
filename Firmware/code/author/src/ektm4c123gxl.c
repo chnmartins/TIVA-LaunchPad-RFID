@@ -25,6 +25,7 @@
 #include "ektm4c123gxl.h"
 #include "functions_gpio.h"
 #include "functions_uart.h"
+#include "functions_tim.h"
 #include "pin_map.h"
 #include "conf.h"
 
@@ -379,4 +380,31 @@ void brd_UartParse (uint8_t UARTx)
 
         break;
     }
+}
+
+/*
+ *
+ */
+fTim_Mod Tim;
+
+void brd_TimInit (void)
+{
+
+    Tim.Module = MOD_TIM0;
+    Tim.Type = TYPE_PERIODIC_UP;
+    Tim.sTime = 0.1;
+    Tim.Int = INT_TIMEOUT;
+    Tim.IntIRQ = test;
+
+    fTim_Init(&Tim);
+}
+
+/*
+ *
+ */
+
+void test (void)
+{
+    fTim_IRQ(&Tim);
+    brd_LedInteract(LEDR, LED_TOGGLE);
 }

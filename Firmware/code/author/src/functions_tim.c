@@ -35,14 +35,7 @@
                                  (x) == MOD_TIM2 || \
                                  (x) == MOD_TIM3 || \
                                  (x) == MOD_TIM4 || \
-                                 (x) == MOD_TIM5 || \
-                                 (x) == MOD_TIM6)
-
-#define ASSERT_TIM_TYPE(x)      ((x) == TYPE_ONE_SHOT_UP || \
-                                 (x) == TYPE_ONE_SHOT_DOWN || \
-                                 (x) == TYPE_PERIODIC_UP || \
-                                 (x) == TYPE_PERIODIC_DOWN || \
-                                 (x) == TYPE_RTC)
+                                 (x) == MOD_TIM5)
 
 #define ASSERT_TIM_TYPE(x)      ((x) == TYPE_ONE_SHOT_UP || \
                                  (x) == TYPE_ONE_SHOT_DOWN || \
@@ -69,25 +62,22 @@ void fTim_enableSysCtl (const fTim_Mod* Tim_Mod)
     switch (Tim_Mod->Module)
     {
     case MOD_TIM0:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
+        SysCtlPeripheralEnable(SYSCTL_PERIPH_WTIMER0);
         break;
     case MOD_TIM1:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER1);
+        SysCtlPeripheralEnable(SYSCTL_PERIPH_WTIMER1);
         break;
     case MOD_TIM2:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER2);
+        SysCtlPeripheralEnable(SYSCTL_PERIPH_WTIMER2);
         break;
     case MOD_TIM3:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER3);
+        SysCtlPeripheralEnable(SYSCTL_PERIPH_WTIMER3);
         break;
     case MOD_TIM4:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER4);
+        SysCtlPeripheralEnable(SYSCTL_PERIPH_WTIMER4);
         break;
     case MOD_TIM5:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER5);
-        break;
-    case MOD_TIM6:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER6);
+        SysCtlPeripheralEnable(SYSCTL_PERIPH_WTIMER5);
         break;
     default:
         break;
@@ -95,7 +85,67 @@ void fTim_enableSysCtl (const fTim_Mod* Tim_Mod)
 }
 
 /*
- * Initializes the specified peripheral.
+ * Sets the type of timer to be initialized.
+ */
+
+void fTim_setType (const fTim_Mod* Tim_Mod)
+{
+#ifdef DEBUG
+    ASSERT_PARAM(ASSERT_TIM_MODULE(Tim_Mod->Module));
+    ASSERT_PARAM(ASSERT_TIM_TYPE(Tim_Mod->Type));
+#endif
+
+    TimerConfigure(Tim_Mod->Module, Tim_Mod->Type);
+}
+
+/*
+ * Calculates the prescaler and the load value for the specified time.
+ *
+ * Formula: Time (s) = Freq (Hz) * LoadValue | For full width timers.
+ */
+
+void fTim_setTime (const fTim_Mod* Tim_Mod)
+{
+#ifdef DEBUG
+    ASSERT_PARAM(ASSERT_TIM_MODULE(Tim_Mod->Module));
+#endif
+    uint64_t LoadValue;
+    double Freq = (double) SysCtlClockGet();
+
+    LoadValue = (uint64_t) (Freq  * (Tim_Mod->sTime));
+
+    TimerLoadSet64(Tim_Mod->Module, LoadValue);
+}
+
+/*
+ * Configures and enables the interrupts.
+ */
+
+void fTim_IntInit(const fTim_Mod* Tim_Mod)
+{
+#ifdef DEBUG
+    ASSERT_PARAM(ASSERT_TIM_MODULE(Tim_Mod->Module));
+#endif
+
+    TimerIntRegister(Tim_Mod->Module, Tim_Mod->Int, Tim_Mod->IntIRQ);
+    TimerIntEnable(Tim_Mod->Module, Tim_Mod->Int);
+}
+
+/*
+ * Starts the specified timer.
+ */
+
+void fTim_Start(const fTim_Mod* Tim_Mod)
+{
+#ifdef DEBUG
+    ASSERT_PARAM(ASSERT_TIM_MODULE(Tim_Mod->Module));
+#endif
+
+    TimerEnable(Tim_Mod->Module, TIMER_A);
+}
+
+/*
+ * Initializes and starts the specified timer.
  */
 
 void fTim_Init (const fTim_Mod* Tim_Mod)
@@ -106,34 +156,22 @@ void fTim_Init (const fTim_Mod* Tim_Mod)
 #endif
 
     fTim_enableSysCtl(Tim_Mod);
-    TimerConfigure(Tim_Mod->Module, Tim_Mod->Type);
+    fTim_setType(Tim_Mod);
+    fTim_setTime(Tim_Mod);
+    fTim_IntInit(Tim_Mod);
+    fTim_Start(Tim_Mod);
 }
 
 /*
- * Calculates the prescaler and the load value for the specified time.
+ * Processes the IRQ interrupt.
  */
 
-void fTim_setTime (const fTim_Mod* Tim_Mod)
+void fTim_IRQ (const fTim_Mod* Tim_Mod)
 {
-#ifdef DEBUG
-    ASSERT_PARAM(ASSERT_TIM_MODULE(Tim_Mod->Module));
-#endif
-    double clockTick = (double) 1 / SysCtlClockGet();
-    double Upper_Margin = Tim_Mod->TimeMode_A + Tim_Mod->TimeMode_B * Tim_Mod->TimeMode_A;
-    double Lower_Margin = Tim_Mod->TimeMode_A - Tim_Mod->TimeMode_B * Tim_Mod->TimeMode_A;
-    double cTime = 0;
-    uint16_t Prescaler = 0;
-	uint16_t LoadValue = 0;
+    uint32_t val = TimerIntStatus(Tim_Mod->Module, Tim_Mod->Int);
 
-	for (Prescaler = 1; Prescaler <= 256; Prescaler++)
-	{
-		for (LoadValue = 1; LoadValue <= 256; LoadValue++)
-		{
-
-		}
-	}
-
-
-	TimerLoadSet(Tim_Mod->Module, TIMER_A, );
+    if (val & INT_TIMEOUT)
+    {
+        TimerIntClear(Tim_Mod->Module, INT_TIMEOUT);
+    }
 }
-

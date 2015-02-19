@@ -56,6 +56,7 @@ bool brd_UartInit (uint8_t UARTx);
 void brd_UartDbgISR (void);
 void brd_UartSend (uint8_t UARTx, const uint8_t* data);
 void brd_UartParse (uint8_t UARTx);
+void test (void);
 
 #ifdef __cplusplus
 }

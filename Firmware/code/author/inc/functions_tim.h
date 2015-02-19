@@ -31,34 +31,37 @@ typedef struct
 {
     uint32_t    Module;
     uint32_t    Type;
-    uint8_t		TimeMode;
-    double		TimeMode_A;		// Prescaler if TimeMode set to MANUAL, Time in ms if TimeMode set to AUTO.
-    double		TimeMode_B;		// LoadValue if TimeMode set to MANUAL, Margin in % if TimeMode set to AUTO.
+    double      sTime;
+    uint32_t    Int;
+    void (*IntIRQ) (void);
 } fTim_Mod;
 
 /* Exported constants --------------------------------------------------------*/
-#define MOD_TIM0    TIMER0_BASE
-#define MOD_TIM1    TIMER1_BASE
-#define MOD_TIM2    TIMER2_BASE
-#define MOD_TIM3    TIMER3_BASE
-#define MOD_TIM4    TIMER4_BASE
-#define MOD_TIM5    TIMER5_BASE
-#define MOD_TIM6    TIMER6_BASE
+#define MOD_TIM0    WTIMER0_BASE
+#define MOD_TIM1    WTIMER1_BASE
+#define MOD_TIM2    WTIMER2_BASE
+#define MOD_TIM3    WTIMER3_BASE
+#define MOD_TIM4    WTIMER4_BASE
+#define MOD_TIM5    WTIMER5_BASE
 
-#define TYPE_ONE_SHOT_UP        TIMER_CFG_ONE_SHOT
-#define TYPE_ONE_SHOT_DOWN      TIMER_CFG_ONE_SHOT_UP
-#define TYPE_PERIODIC_UP        TIMER_CFG_PERIODIC
-#define TYPE_PERIODIC_DOWN      TIMER_CFG_PERIODIC_UP
+#define TYPE_ONE_SHOT_UP        TIMER_CFG_ONE_SHOT_UP
+#define TYPE_ONE_SHOT_DOWN      TIMER_CFG_ONE_SHOT
+#define TYPE_PERIODIC_UP        TIMER_CFG_PERIODIC_UP
+#define TYPE_PERIODIC_DOWN      TIMER_CFG_PERIODIC
 #define TYPE_RTC                TIMER_CFG_RTC
 
-#define	TIMEMODE_MANUAL			0x01
-#define	TIMEMODE_AUTO			0x02
+#define INT_TIMEOUT         TIMER_TIMA_TIMEOUT
+// TODO: Complete with the rest of the interrupts here.
 
 /* Exported macro ------------------------------------------------------------*/
 
 /* Exported functions --------------------------------------------------------*/
 void fTim_enableSysCtl (const fTim_Mod* Tim_Mod);
-
+void fTim_setType (const fTim_Mod* Tim_Mod);
+void fTim_setTime (const fTim_Mod* Tim_Mod);
+void fTim_IntInit(const fTim_Mod* Tim_Mod);
+void fTim_Start(const fTim_Mod* Tim_Mod);
+void fTim_Init (const fTim_Mod* Tim_Mod);
 
 #ifdef __cplusplus
 }
