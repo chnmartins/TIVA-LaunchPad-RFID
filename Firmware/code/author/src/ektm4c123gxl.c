@@ -53,7 +53,11 @@
 
 #define UARTDBG_RXBUF_SIZE   50
 #define UARTDBG_TXBUF_SIZE   50
+
 #define UARTDBG_CMD_DELIMITER   '\n'
+#define UARTDBG_CMD_HELLO       "Are you there?\r\n"
+#define UARTDBG_CMD_HEY         "Yes, I'm here.\r\n"
+#define UARTDBG_CMD_UNKNOWN     "I have no idea what you are talking about.\r\n"
 
 /* Private macro -------------------------------------------------------------*/
 
@@ -348,12 +352,11 @@ void brd_UartParse (uint8_t UARTx)
 
                 if (*(Cmd + CmdIndex) == UARTDBG_CMD_DELIMITER)
                 {
-                    if (!(strcmp((char*) Cmd, "HELLO\r\n")))
+                    if (!(strcmp((char*) Cmd, UARTDBG_CMD_HELLO)))
                     {
-                        brd_LedInteract(LEDR, LED_TOGGLE);
-                        brd_UartSend(UARTDBG, "HAHAHAHAHA\r\n");
+                        brd_UartSend(UARTDBG, UARTDBG_CMD_HEY);
                     } else {
-                        brd_UartSend(UARTDBG, "UNRECOGNIZED CMD\r\n");
+                        brd_UartSend(UARTDBG, UARTDBG_CMD_UNKNOWN);
                     }
 
                     UartDbg->RxBufProcIndex = RxBufIndex;

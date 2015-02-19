@@ -76,13 +76,6 @@ int main (void)
 
     brd_UartInit(UARTDBG);
 
-    brd_UartSend(UARTDBG, "-----0123456789\r\n");
-    brd_UartSend(UARTDBG, "0123456789\r\n");
-    brd_UartSend(UARTDBG, "0123456789\r\n");
-    brd_UartSend(UARTDBG, "0123456789\r\n");
-    brd_UartSend(UARTDBG, "0123456789\r\n");
-    brd_UartSend(UARTDBG, "0123456789------\r\n");
-
 	while (1)
 	{
 	    brd_UartParse(UARTDBG);
