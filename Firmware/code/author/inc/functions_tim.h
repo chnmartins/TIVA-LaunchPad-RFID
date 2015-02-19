@@ -31,7 +31,9 @@ typedef struct
 {
     uint32_t    Module;
     uint32_t    Type;
-
+    uint8_t		TimeMode;
+    double		TimeMode_A;		// Prescaler if TimeMode set to MANUAL, Time in ms if TimeMode set to AUTO.
+    double		TimeMode_B;		// LoadValue if TimeMode set to MANUAL, Margin in % if TimeMode set to AUTO.
 } fTim_Mod;
 
 /* Exported constants --------------------------------------------------------*/
@@ -48,6 +50,9 @@ typedef struct
 #define TYPE_PERIODIC_UP        TIMER_CFG_PERIODIC
 #define TYPE_PERIODIC_DOWN      TIMER_CFG_PERIODIC_UP
 #define TYPE_RTC                TIMER_CFG_RTC
+
+#define	TIMEMODE_MANUAL			0x01
+#define	TIMEMODE_AUTO			0x02
 
 /* Exported macro ------------------------------------------------------------*/
 

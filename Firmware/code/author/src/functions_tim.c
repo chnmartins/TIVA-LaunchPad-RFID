@@ -27,6 +27,7 @@
 /* Private typedef -----------------------------------------------------------*/
 
 /* Private define ------------------------------------------------------------*/
+#define	TIM_MARGIN	(0.01)
 
 /* Private macro -------------------------------------------------------------*/
 #define ASSERT_TIM_MODULE(x)    ((x) == MOD_TIM0 || \
@@ -36,6 +37,12 @@
                                  (x) == MOD_TIM4 || \
                                  (x) == MOD_TIM5 || \
                                  (x) == MOD_TIM6)
+
+#define ASSERT_TIM_TYPE(x)      ((x) == TYPE_ONE_SHOT_UP || \
+                                 (x) == TYPE_ONE_SHOT_DOWN || \
+                                 (x) == TYPE_PERIODIC_UP || \
+                                 (x) == TYPE_PERIODIC_DOWN || \
+                                 (x) == TYPE_RTC)
 
 #define ASSERT_TIM_TYPE(x)      ((x) == TYPE_ONE_SHOT_UP || \
                                  (x) == TYPE_ONE_SHOT_DOWN || \
@@ -100,5 +107,33 @@ void fTim_Init (const fTim_Mod* Tim_Mod)
 
     fTim_enableSysCtl(Tim_Mod);
     TimerConfigure(Tim_Mod->Module, Tim_Mod->Type);
-    TimerLoadSet()
 }
+
+/*
+ * Calculates the prescaler and the load value for the specified time.
+ */
+
+void fTim_setTime (const fTim_Mod* Tim_Mod)
+{
+#ifdef DEBUG
+    ASSERT_PARAM(ASSERT_TIM_MODULE(Tim_Mod->Module));
+#endif
+    double clockTick = (double) 1 / SysCtlClockGet();
+    double Upper_Margin = Tim_Mod->TimeMode_A + Tim_Mod->TimeMode_B * Tim_Mod->TimeMode_A;
+    double Lower_Margin = Tim_Mod->TimeMode_A - Tim_Mod->TimeMode_B * Tim_Mod->TimeMode_A;
+    double cTime = 0;
+    uint16_t Prescaler = 0;
+	uint16_t LoadValue = 0;
+
+	for (Prescaler = 1; Prescaler <= 256; Prescaler++)
+	{
+		for (LoadValue = 1; LoadValue <= 256; LoadValue++)
+		{
+
+		}
+	}
+
+
+	TimerLoadSet(Tim_Mod->Module, TIMER_A, );
+}
+
