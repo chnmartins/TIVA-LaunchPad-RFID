@@ -74,11 +74,13 @@ int main (void)
 
     brd_LedInteract(LEDG | LEDR | LEDB, LED_OFF);
 
-    brd_UartInit(UARTDBG);
+    brd_UartInit(DBGUART);
+
+    brd_RfidInit();
 
 	while (1)
 	{
-	    brd_UartParse(UARTDBG);
+	    brd_UartParse(DBGUART);
 	    brd_delay(1);
 	    brd_LedInteract(LEDR, LED_TOGGLE);
 	}

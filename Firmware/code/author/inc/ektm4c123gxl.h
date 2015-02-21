@@ -41,7 +41,7 @@
 #define PB1_ON  0x01
 #define PB2_ON  0x02
 
-#define UARTDBG 0x01
+#define DBGUART 0x01
 
 /* Exported macro ------------------------------------------------------------*/
 
@@ -57,6 +57,7 @@ void brd_UartDbgISR (void);
 void brd_UartSend (uint8_t UARTx, const uint8_t* data);
 void brd_UartParse (uint8_t UARTx);
 void brd_delay (double sTime);
+bool brd_RfidInit (void);
 
 #ifdef __cplusplus
 }

@@ -33,6 +33,13 @@ typedef struct
 	uint8_t		nPins;
 	fGpio_Pin**  Pins;
 	uint32_t	Protocol;
+	uint32_t    Mode;
+	uint32_t    ClockSource;
+	uint32_t    BitRate;
+	uint32_t    DataWidth;
+
+	uint32_t    Int;
+	void (*IntIRQ) (void);
 } fSpi_Mod;
 
 
@@ -53,9 +60,27 @@ typedef struct
 #define	MODE_SLAVE				SSI_MODE_SLAVE
 #define	MODE_SLAVE_NO_OUTPUT	SSI_MODE_SLAVE_OD
 
+#define FSPI_CLK_SYSTEM              SSI_CLOCK_SYSTEM
+#define FSPI_CLK_PIOSC               SSI_CLOCK_PIOSC
+
+#define INT_NONE                    0
+#define INT_TXFIFO_HALF_OR_LESS     SSI_TXFF
+#define INT_TXFIFO_EMPTY            SSI_TXEOT
+#define INT_RXFIFO_HALF_OR_MORE     SSI_RXFF
+#define INT_RX_TIMEOUT              SSI_RXTO
+#define INT_RX_OVERRUN              SSI_RXOR
+
 /* Exported macro ------------------------------------------------------------*/
 
 /* Exported functions --------------------------------------------------------*/
+void fSpi_enableSysCtl (const fSpi_Mod* Spi_Mod);
+void fSpi_setGpio(const fSpi_Mod* Spi_Mod);
+void fSpi_Disable (const fSpi_Mod* Spi_Mod);
+bool fSpi_Config (const fSpi_Mod* Spi_Mod);
+void fSpi_Start (const fSpi_Mod* Spi_Mod);
+void fSpi_IntInit (const fSpi_Mod* Spi_Mod);
+void fSpi_Init (const fSpi_Mod* Spi_Mod);
+void fSpi_SendReceive (const fSpi_Mod* Spi_Mod, uint32_t sByte, uint32_t* rByte);
 
 #ifdef __cplusplus
 }

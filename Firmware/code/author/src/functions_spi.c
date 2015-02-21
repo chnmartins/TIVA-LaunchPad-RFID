@@ -29,27 +29,31 @@
 /* Private typedef -----------------------------------------------------------*/
 
 /* Private define ------------------------------------------------------------*/
+#define PIOSC_FREQUENCY             (16000000)
 
 /* Private macro -------------------------------------------------------------*/
-#define	ASSERT_SPI_MODULE(x)		((x) == SPI_MOD0 || \
-							 	 	 (x) == SPI_MOD1 || \
-							 	 	 (x) == SPI_MOD2 || \
-							 	 	 (x) == SPI_MOD3)
+#define	ASSERT_SPI_MODULE(x)		((x)->Module == SPI_MOD0 || \
+							 	 	 (x)->Module == SPI_MOD1 || \
+							 	 	 (x)->Module == SPI_MOD2 || \
+							 	 	 (x)->Module == SPI_MOD3)
 
-#define	ASSERT_SPI_PROTOCOL			((x) == PROT_POL0_PHA0 || \
-									 (x) == PROT_POL0_PHA1 || \
-									 (x) == PROT_POL1_PHA0 || \
-									 (x) == PROT_POL1_PHA1 || \
-									 (x) == PROT_TI || \
-									 (x) == PROT_NMW)
+#define	ASSERT_SPI_PROTOCOL(x)		((x)->Protocol == PROT_POL0_PHA0 || \
+									 (x)->Protocol == PROT_POL0_PHA1 || \
+									 (x)->Protocol == PROT_POL1_PHA0 || \
+									 (x)->Protocol == PROT_POL1_PHA1 || \
+									 (x)->Protocol == PROT_TI || \
+									 (x)->Protocol == PROT_NMW)
 
-#define	ASSERT_SPI_MODE				((x) == MODE_MASTER || \
-									 (x) == MODE_SLAVE || \
-									 (x) == MODE_SLAVE_NO_OUTPUT)
+#define	ASSERT_SPI_MODE(x)			((x)->Mode == MODE_MASTER || \
+									 (x)->Mode == MODE_SLAVE || \
+									 (x)->Mode == MODE_SLAVE_NO_OUTPUT)
 
-#define	ASSERT_SPI_BITRATE(x)
+#define ASSERT_SPI_CLOCKSOURCE(x)   ((x)->ClockSource == FSPI_CLK_PIOSC || \
+                                     (x)->ClockSource == FSPI_CLK_SYSTEM)
 
-#define	ASSERT_SPI_DATAWIDTH(x)		((x) >= 4 && (x) <= 16)
+#define	ASSERT_SPI_BITRATE(x)       ((x)->Mode == MODE_MASTER ? (x)->BitRate <= SysCtlClockGet() * 2 : (x)->BitRate <= SysCtlClockGet() * 12)
+
+#define	ASSERT_SPI_DATAWIDTH(x)		((x)->DataWidth >= 4 && (x)->DataWidth <= 16)
 
 
 /* Private variables ---------------------------------------------------------*/
@@ -65,7 +69,7 @@
 void fSpi_enableSysCtl (const fSpi_Mod* Spi_Mod)
 {
 #ifdef	DEBUG
-	ASSERT_PARAM(ASSERT_SPI_MODULE(Spi_Mod->Module));
+	ASSERT_PARAM(ASSERT_SPI_MODULE(Spi_Mod));
 #endif
 
 	switch (Spi_Mod->Module)
@@ -94,7 +98,7 @@ void fSpi_enableSysCtl (const fSpi_Mod* Spi_Mod)
 void fSpi_setGpio(const fSpi_Mod* Spi_Mod)
 {
 #ifdef	DEBUG
-	ASSERT_PARAM(ASSERT_SPI_MODULE(Spi_Mod->Module));
+	ASSERT_PARAM(ASSERT_SPI_MODULE(Spi_Mod));
 #endif
 
 	uint8_t i = 0;
@@ -116,7 +120,7 @@ void fSpi_setGpio(const fSpi_Mod* Spi_Mod)
 void fSpi_Disable (const fSpi_Mod* Spi_Mod)
 {
 #ifdef	DEBUG
-	ASSERT_PARAM(ASSERT_SPI_MODULE(Spi_Mod->Module));
+	ASSERT_PARAM(ASSERT_SPI_MODULE(Spi_Mod));
 #endif
 
 	SSIDisable(Spi_Mod->Module);
@@ -126,13 +130,67 @@ void fSpi_Disable (const fSpi_Mod* Spi_Mod)
  * Configures the specified SPI peripheral.
  */
 
-void fSpi_Config (const fSpi_Mod* Spi_Mod)
+bool fSpi_Config (const fSpi_Mod* Spi_Mod)
 {
 #ifdef	DEBUG
-	ASSERT_PARAM(ASSERT_SPI_MODULE(Spi_Mod->Module));
+	ASSERT_PARAM(ASSERT_SPI_MODULE(Spi_Mod));
+    ASSERT_PARAM(ASSERT_SPI_MODE(Spi_Mod));
+    ASSERT_PARAM(ASSERT_SPI_PROTOCOL(Spi_Mod));
+	ASSERT_PARAM(ASSERT_SPI_CLOCKSOURCE(Spi_Mod));
+	ASSERT_PARAM(ASSERT_SPI_DATAWIDTH(Spi_Mod));
+#endif
+	uint32_t Freq;
+
+	SSIClockSourceSet(Spi_Mod->Module, Spi_Mod->ClockSource);
+
+	if (Spi_Mod->ClockSource == FSPI_CLK_SYSTEM) {
+	    Freq = SysCtlClockGet();
+	} else if (Spi_Mod->ClockSource == FSPI_CLK_PIOSC){
+	    Freq = PIOSC_FREQUENCY;
+	}
+
+	if (Spi_Mod->Mode == MODE_MASTER)
+	{
+	    if (Spi_Mod->BitRate > Freq * 2)
+	        return false;
+	} else {
+	    if (Spi_Mod->BitRate > Freq * 12)
+	        return false;
+	}
+
+	SSIConfigSetExpClk(Spi_Mod->Module, Freq, Spi_Mod->Protocol, Spi_Mod->Mode, Spi_Mod->BitRate, Spi_Mod->DataWidth);
+
+	return true;
+}
+
+/*
+ * Starts the SPI peripheral.
+ */
+
+void fSpi_Start (const fSpi_Mod* Spi_Mod)
+{
+#ifdef DEBUG
+    ASSERT_PARAM(ASSERT_SPI_MODULE(Spi_Mod));
 #endif
 
+    SSIEnable(Spi_Mod->Module);
+}
 
+/*
+ * Configures the interrupts.
+ */
+
+void fSpi_IntInit (const fSpi_Mod* Spi_Mod)
+{
+#ifdef DEBUG
+    ASSERT_PARAM(ASSERT_SPI_MODULE(Spi_Mod));
+#endif
+
+    if (Spi_Mod->Int != INT_NONE)
+    {
+        SSIIntRegister(Spi_Mod->Module, Spi_Mod->IntIRQ);
+        SSIIntEnable(Spi_Mod->Module, Spi_Mod->Int);
+    }
 }
 
 /*
@@ -142,14 +200,32 @@ void fSpi_Config (const fSpi_Mod* Spi_Mod)
 void fSpi_Init (const fSpi_Mod* Spi_Mod)
 {
 #ifdef	DEBUG
-	ASSERT_PARAM(ASSERT_SPI_MODULE(Spi_Mod->Module));
+    ASSERT_PARAM(ASSERT_SPI_MODULE(Spi_Mod));
+    ASSERT_PARAM(ASSERT_SPI_MODE(Spi_Mod));
+    ASSERT_PARAM(ASSERT_SPI_PROTOCOL(Spi_Mod));
+    ASSERT_PARAM(ASSERT_SPI_BITRATE(Spi_Mod));
+    ASSERT_PARAM(ASSERT_SPI_CLOCKSOURCE(Spi_Mod));
+    ASSERT_PARAM(ASSERT_SPI_DATAWIDTH(Spi_Mod));
 #endif
 
 	fSpi_enableSysCtl(Spi_Mod);
 	fSpi_setGpio(Spi_Mod);
 	fSpi_Disable(Spi_Mod);
-
-
+	fSpi_Config(Spi_Mod);
+	fSpi_IntInit(Spi_Mod);
+	fSpi_Start(Spi_Mod);
 }
 
+/*
+ * Sends the specified byte and returns the received byte.
+ */
+
+void fSpi_SendReceive (const fSpi_Mod* Spi_Mod, uint32_t sByte, uint32_t* rByte)
+{
+#ifdef   DEBUG
+    ASSERT_PARAM(ASSERT_SPI_MODULE(Spi_Mod));
+#endif
+    SSIDataPut(Spi_Mod->Module, sByte);
+    SSIDataGet(Spi_Mod->Module, rByte);
+}
 
