@@ -26,6 +26,7 @@
 #include "functions_gpio.h"
 #include "functions_uart.h"
 #include "functions_tim.h"
+#include "functions_spi.h"
 #include "pin_map.h"
 #include "conf.h"
 
@@ -39,31 +40,62 @@
 #define LEDG_PIN     GPIO_PIN_3
 #define LEDG_PORT    GPIO_PORTF_BASE
 
+
 #define PB1_PIN      GPIO_PIN_4
 #define PB1_PORT     GPIO_PORTF_BASE
 #define PB2_PIN      GPIO_PIN_0
 #define PB2_PORT     GPIO_PORTF_BASE
 
-#define UARTDBG_RX_PIN  GPIO_PIN_0
-#define UARTDBG_RX_PORT GPIO_PORTA_BASE
-#define UARTDBG_RX_AF   GPIO_PA0_U0RX
 
-#define UARTDBG_TX_PIN  GPIO_PIN_1
-#define UARTDBG_TX_PORT GPIO_PORTA_BASE
-#define UARTDBG_TX_AF   GPIO_PA1_U0TX
+#define DBGUART_RX_PIN  GPIO_PIN_0
+#define DBGUART_RX_PORT GPIO_PORTA_BASE
+#define DBGUART_RX_AF   GPIO_PA0_U0RX
 
-#define UARTDBG_RXBUF_SIZE   50
-#define UARTDBG_TXBUF_SIZE   50
+#define DBGUART_TX_PIN  GPIO_PIN_1
+#define DBGUART_TX_PORT GPIO_PORTA_BASE
+#define DBGUART_TX_AF   GPIO_PA1_U0TX
 
-#define UARTDBG_CMD_DELIMITER   '\n'
-#define UARTDBG_CMD_HELLO       "Are you there?\r\n"
-#define UARTDBG_CMD_HEY         "Yes, I'm here.\r\n"
-#define UARTDBG_CMD_UNKNOWN     "I have no idea what you are talking about.\r\n"
+#define DBGUART_RXBUF_SIZE   50
+#define DBGUART_TXBUF_SIZE   50
+
+#define DBGUART_CMD_DELIMITER   '\n'
+#define DBGUART_CMD_HELLO       "Are you there?\r\n"
+#define DBGUART_CMD_HEY         "Yes, I'm here.\r\n"
+#define DBGUART_CMD_UNKNOWN     "I have no idea what you are talking about.\r\n"
+
+
+#define SPIRFID_MISO_PIN        GPIO_PIN_4
+#define SPIRFID_MISO_PORT       GPIO_PORTA_BASE
+#define SPIRFID_MISO_AF         GPIO_PA4_SSI0RX
+
+#define SPIRFID_MOSI_PIN        GPIO_PIN_5
+#define SPIRFID_MOSI_PORT       GPIO_PORTA_BASE
+#define SPIRFID_MOSI_AF         GPIO_PA5_SSI0TX
+
+#define SPIRFID_NSS_PIN         GPIO_PIN_3
+#define SPIRFID_NSS_PORT        GPIO_PORTA_BASE
+#define SPIRFID_NSS_AF          GPIO_PA3_SSI0FSS
+
+#define SPIRFID_CLK_PIN         GPIO_PIN_2
+#define SPIRFID_CLK_PORT        GPIO_PORTA_BASE
+#define SPIRFID_CLK_AF          GPIO_PA2_SSI0CLK
+
+#define SPIRFID_RST_PIN         GPIO_PIN_2
+#define SPIRFID_RST_PORT        GPIO_PORTE_BASE
+
+#define SPIRFID_IRQ_PIN         GPIO_PIN_3
+#define SPIRFID_IRQ_PORT        GPIO_PORTE_BASE
+
+#define SPIRFID_RXBUF_SIZE      10
+#define SPIRFID_TXBUF_SIZE      10
 
 /* Private macro -------------------------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
 fUart_Mod* UartDbg;
+fSpi_Mod* SpiRfid;
+fGpio_Pin*  RstRfid;
+fGpio_Pin*  IrqRfid;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -236,7 +268,7 @@ bool brd_UartInit (uint8_t UARTx)
 {
     switch (UARTx)
     {
-    case UARTDBG:
+    case DBGUART:
     	UartDbg = (fUart_Mod*) calloc (1, sizeof(fUart_Mod));
     	if (UartDbg == (fUart_Mod*) NULL)
     		return false;
@@ -247,15 +279,15 @@ bool brd_UartInit (uint8_t UARTx)
         if (UartDbg->Tx == (fUart_Pin*) NULL)
             return false;
 
-        UartDbg->Rx->Pin = UARTDBG_RX_PIN;
-        UartDbg->Rx->Port = UARTDBG_RX_PORT;
-        UartDbg->Rx->AlternateFunction = UARTDBG_RX_AF;
+        UartDbg->Rx->Pin = DBGUART_RX_PIN;
+        UartDbg->Rx->Port = DBGUART_RX_PORT;
+        UartDbg->Rx->AlternateFunction = DBGUART_RX_AF;
         UartDbg->Rx->Current = CURR_2MA;
         UartDbg->Rx->Type = TYPE_PP_PD;
 
-        UartDbg->Tx->Pin = UARTDBG_TX_PIN;
-        UartDbg->Tx->Port = UARTDBG_TX_PORT;
-        UartDbg->Tx->AlternateFunction = UARTDBG_TX_AF;
+        UartDbg->Tx->Pin = DBGUART_TX_PIN;
+        UartDbg->Tx->Port = DBGUART_TX_PORT;
+        UartDbg->Tx->AlternateFunction = DBGUART_TX_AF;
         UartDbg->Tx->Current = CURR_2MA;
         UartDbg->Tx->Type = TYPE_PP_PD;
 
@@ -269,19 +301,19 @@ bool brd_UartInit (uint8_t UARTx)
         UartDbg->Interrupts = INT_RECEIVE | INT_TRANSMIT | INT_OVERRUN_ERROR | INT_BREAK_ERROR | INT_PARITY_ERROR | INT_FRAMING_ERROR | INT_RECEIVE_TIMEOUT;
         UartDbg->IntIRQ = brd_UartDbgISR;
 
-        UartDbg->RxBuf = (uint8_t*) calloc(UARTDBG_RXBUF_SIZE, sizeof(uint8_t));
+        UartDbg->RxBuf = (uint8_t*) calloc(DBGUART_RXBUF_SIZE, sizeof(uint8_t));
         if (UartDbg->RxBuf == NULL)
         	return false;
         UartDbg->RxBufProcIndex = 0;
         UartDbg->RxBufUnprocIndex = 0;
-        UartDbg->RxBufLength = UARTDBG_RXBUF_SIZE;
+        UartDbg->RxBufLength = DBGUART_RXBUF_SIZE;
 
-        UartDbg->TxBuf = (uint8_t*) calloc(UARTDBG_TXBUF_SIZE, sizeof(uint8_t));
+        UartDbg->TxBuf = (uint8_t*) calloc(DBGUART_TXBUF_SIZE, sizeof(uint8_t));
         if (UartDbg->TxBuf == NULL)
         	return false;
         UartDbg->TxBufProcIndex = 0;
         UartDbg->TxBufUnprocIndex = 0;
-        UartDbg->TxBufLength = UARTDBG_TXBUF_SIZE;
+        UartDbg->TxBufLength = DBGUART_TXBUF_SIZE;
 
         fUart_Init(UartDbg);
 
@@ -310,7 +342,7 @@ void brd_UartSend (uint8_t UARTx, const uint8_t* data)
 
     switch (UARTx)
     {
-    case UARTDBG:
+    case DBGUART:
         length = 0;
 
         while (*(data++))
@@ -338,7 +370,7 @@ void brd_UartParse (uint8_t UARTx)
 
     switch (UARTx)
     {
-    case UARTDBG:
+    case DBGUART:
         RxBufIndex = UartDbg->RxBufProcIndex;
         CmdIndex = 0;
         memset(Cmd, 0x00, sizeof(Cmd) * sizeof(uint8_t));
@@ -351,13 +383,13 @@ void brd_UartParse (uint8_t UARTx)
                 if (RxBufIndex >= UartDbg->RxBufLength)
                     RxBufIndex = 0;
 
-                if (*(Cmd + CmdIndex) == UARTDBG_CMD_DELIMITER)
+                if (*(Cmd + CmdIndex) == DBGUART_CMD_DELIMITER)
                 {
-                    if (!(strcmp((char*) Cmd, UARTDBG_CMD_HELLO)))
+                    if (!(strcmp((char*) Cmd, DBGUART_CMD_HELLO)))
                     {
-                        brd_UartSend(UARTDBG, UARTDBG_CMD_HEY);
+                        brd_UartSend(DBGUART, DBGUART_CMD_HEY);
                     } else {
-                        brd_UartSend(UARTDBG, UARTDBG_CMD_UNKNOWN);
+                        brd_UartSend(DBGUART, DBGUART_CMD_UNKNOWN);
                     }
 
                     UartDbg->RxBufProcIndex = RxBufIndex;
@@ -394,4 +426,79 @@ void brd_delay (double sTime)
 
     while (!(fTim_IsTimeout(&Tim_Mod)));
 
+}
+
+/*
+ * Initialize the RFID interface.
+ */
+
+bool brd_RfidInit (void)
+{
+    uint8_t i;
+
+    SpiRfid = (fSpi_Mod*) calloc(1, sizeof(fSpi_Mod));
+    if (SpiRfid == (fSpi_Mod*) NULL)
+        return false;
+
+    SpiRfid->nPins = 4;
+    SpiRfid->Pins = (fGpio_Pin**) calloc(SpiRfid->nPins, sizeof(fGpio_Pin*));
+    if (SpiRfid->Pins == (fGpio_Pin**) NULL)
+        return false;
+
+    for (i = 0; i < SpiRfid->nPins; i++)
+    {
+        (*(SpiRfid->Pins + i)) = (fGpio_Pin*) calloc(1, sizeof(fGpio_Pin));
+        if ((*(SpiRfid->Pins + i)) == (fGpio_Pin*) NULL)
+            return false;
+        (*(SpiRfid->Pins + i))->Direction = DIR_HW;
+        (*(SpiRfid->Pins + i))->Current = CURR_2MA;
+    }
+
+    (*(SpiRfid->Pins + 0))->Pin = SPIRFID_MISO_PIN;
+    (*(SpiRfid->Pins + 0))->Port = SPIRFID_MISO_PORT;
+    (*(SpiRfid->Pins + 0))->AlternateFunction = SPIRFID_MISO_AF;
+    (*(SpiRfid->Pins + 0))->Type = TYPE_PP_PD;
+
+    (*(SpiRfid->Pins + 1))->Pin = SPIRFID_MOSI_PIN;
+    (*(SpiRfid->Pins + 1))->Port = SPIRFID_MOSI_PORT;
+    (*(SpiRfid->Pins + 1))->AlternateFunction = SPIRFID_MOSI_AF;
+    (*(SpiRfid->Pins + 1))->Type = TYPE_PP_PD;
+
+    (*(SpiRfid->Pins + 2))->Pin = SPIRFID_CLK_PIN;
+    (*(SpiRfid->Pins + 2))->Port = SPIRFID_CLK_PORT;
+    (*(SpiRfid->Pins + 2))->AlternateFunction = SPIRFID_CLK_AF;
+    (*(SpiRfid->Pins + 2))->Type = TYPE_PP_PD;
+
+    (*(SpiRfid->Pins + 3))->Pin = SPIRFID_NSS_PIN;
+    (*(SpiRfid->Pins + 3))->Port = SPIRFID_NSS_PORT;
+    (*(SpiRfid->Pins + 3))->AlternateFunction = SPIRFID_NSS_AF;
+    (*(SpiRfid->Pins + 3))->Type = TYPE_PP_PU;
+
+    SpiRfid->ClockSource = FSPI_CLK_SYSTEM;
+    SpiRfid->DataWidth = 8;
+    SpiRfid->Mode = MODE_MASTER;
+    SpiRfid->BitRate = 100000;
+    SpiRfid->Module = SPI_MOD0;
+    SpiRfid->Protocol = PROT_POL0_PHA0;
+    SpiRfid->Int = INT_NONE;
+
+    RstRfid = calloc(1, sizeof(fGpio_Pin));
+    if (RstRfid == NULL)
+        return 1;
+
+    RstRfid->Pin = SPIRFID_RST_PIN;
+    RstRfid->Port = SPIRFID_RST_PORT;
+    RstRfid->Current = CURR_2MA;
+    RstRfid->Direction = DIR_OUT;
+    RstRfid->Type = TYPE_PP_PU;
+    fGpio_Init(RstRfid);
+
+    for (i = 0; i < SpiRfid->nPins; i++)
+    {
+        free(*(SpiRfid->Pins + i));
+    }
+
+    free(SpiRfid->Pins);
+
+    return true;
 }
