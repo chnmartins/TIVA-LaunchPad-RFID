@@ -14,57 +14,44 @@
   */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __EKTM4C123GXL_PINOUT_H
-#define __EKTM4C123GXL_PINOUT_H
+#ifndef __MFRC522_H
+#define __MFRC522_H
 
 #ifdef __cplusplus
  extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include <stdint.h>
 
 /* Exported types ------------------------------------------------------------*/
+ typedef struct
+ {
+     void (*Delay) (double seconds);
+     bool (*HwInit) (void);
+     void (*RstCtrl) (uint8_t MFRC522_RSTx);
+     void (*SendByte) (uint8_t sData);
+     void (*ReadByte) (uint8_t* rData);
+ } mfrc522_Mod;
+
+ typedef enum
+ {
+     mfrc522_ok,
+     mfrc522_error,
+ } mfrc522_result;
 
 /* Exported constants --------------------------------------------------------*/
-#define LEDR    0x01
-#define LEDG    0x02
-#define LEDB    0x04
-
-#define LED_ON      0x01
-#define LED_OFF     0x02
-#define LED_TOGGLE  0x03
-
-#define PB1     0x01
-#define PB2     0x02
-
-#define PB1_ON  0x01
-#define PB2_ON  0x02
-
-#define DBGUART 0x01
 
 /* Exported macro ------------------------------------------------------------*/
 
 /* Exported functions --------------------------------------------------------*/
-void brd_LedInit (uint8_t LEDx);
-void brd_LedInteract (uint8_t LEDx, uint8_t interact);
-void brd_PushButtonInit (uint8_t PBx);
-uint8_t brd_PushButtonRead (uint8_t PBx);
-void brd_PushButtonInitInt (uint8_t PBx, void (*IntIRQ) (void));
-uint8_t brd_PushButtonGetInt (uint8_t PBx);
-bool brd_UartInit (uint8_t UARTx);
-void brd_UartDbgISR (void);
-void brd_UartSend (uint8_t UARTx, const uint8_t* data);
-void brd_UartParse (uint8_t UARTx);
-void brd_delay (double sTime);
-bool brd_RfidHwInit (void);
-bool brd_RfidInit (void);
-void brd_RfidSend (uint8_t sData);
-void brd_RfidRead (uint8_t* rData);
+mfrc522_result mfrc522_Init (mfrc522_Mod* Dev);
+void mfrc522_HardReset (mfrc522_Mod* Dev);
+void mfrc522_ReadAddress (mfrc522_Mod* Dev, uint8_t address, uint8_t* value);
+void mfrc522_WriteAddress (mfrc522_Mod* Dev, uint8_t address, uint8_t value);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /*__EKTM4C123GXL_PINOUT_H */
+#endif /*__MFRC522_H */
  

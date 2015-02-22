@@ -27,6 +27,7 @@
 #include "functions_uart.h"
 #include "functions_tim.h"
 #include "functions_spi.h"
+#include "mfrc522.h"
 #include "pin_map.h"
 #include "conf.h"
 
@@ -96,6 +97,7 @@ fUart_Mod* UartDbg;
 fSpi_Mod* SpiRfid;
 fGpio_Pin*  RstRfid;
 fGpio_Pin*  IrqRfid;
+mfrc522_Mod* RfidDev;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -432,7 +434,7 @@ void brd_delay (double sTime)
  * Initialize the RFID interface.
  */
 
-bool brd_RfidInit (void)
+bool brd_RfidHwInit (void)
 {
     uint8_t i;
 
@@ -481,6 +483,7 @@ bool brd_RfidInit (void)
     SpiRfid->Module = SPI_MOD0;
     SpiRfid->Protocol = PROT_POL0_PHA0;
     SpiRfid->Int = INT_NONE;
+    fSpi_Init(SpiRfid);
 
     RstRfid = calloc(1, sizeof(fGpio_Pin));
     if (RstRfid == NULL)
@@ -499,6 +502,64 @@ bool brd_RfidInit (void)
     }
 
     free(SpiRfid->Pins);
+
+    return true;
+}
+
+/*
+ * Sends a byte and receives a byte over the SPI peripheral linked to the RFID device.
+ */
+
+void brd_RfidSend (uint8_t sData)
+{
+    // SPI fifo gets cleared by reading the byte.
+    uint32_t a = 0;
+    fSpi_SendReceive(SpiRfid, (uint32_t) sData, &a);
+}
+
+/*
+ * Sends a byte and receives a byte over the SPI peripheral linked to the RFID device.
+ */
+
+void brd_RfidRead (uint8_t* rData)
+{
+    // Send a random character to generate the clock pulses.
+    // Send 0x80, it equals read address 0x00 on the device.
+    uint32_t a = 0x80;
+    fSpi_SendReceive(SpiRfid, a, (uint32_t*) rData);
+}
+
+/*
+ * Manages the reset pin on the RFID device.
+ */
+
+void brd_RfidRstControl (uint8_t status)
+{
+    if (status)
+    {
+        fGpio_setHigh(RstRfid);
+    } else {
+        fGpio_setLow(RstRfid);
+    }
+}
+
+/*
+ * Initializes the RFID device completely.
+ */
+
+bool brd_RfidInit (void)
+{
+    RfidDev = calloc(1, sizeof(mfrc522_Mod));
+    if (RfidDev == NULL)
+        return false;
+
+    RfidDev->Delay = brd_delay;
+    RfidDev->HwInit = brd_RfidHwInit;
+    RfidDev->RstCtrl = brd_RfidRstControl;
+    RfidDev->SendByte = brd_RfidSend;
+    RfidDev->ReadByte = brd_RfidRead;
+
+    mfrc522_Init(RfidDev);
 
     return true;
 }
