@@ -20,6 +20,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 #include "mfrc522.h"
 #include "conf.h"
 
@@ -53,6 +55,7 @@ typedef enum
 #define MFRC522_ADDR_COMMAND        (0x01)
 #define MFRC522_ADDR_FIFODATA       (0x09)
 #define MFRC522_ADDR_FIFOLEVEL      (0x0A)
+#define MFRC522_ADDR_AUTOTEST       (0x36)
 
 // Bit masks
 #define MFRC522_BMS_COMMAND_COMMAND_BITS                    BITS(0x0F, 0)
@@ -71,6 +74,9 @@ typedef enum
 
 #define MFRC522_BMS_FIFOLEVEL_FIFOLEVEL_BITS                BITS(0x7F, 0)
 #define MFRC522_BMS_FIFOLEVEL_FLUSHBUFFER_BIT               BIT(0x07)
+
+#define MFRC522_BMS_AUTOTEST_SELFTEST_BITS                  BITS(0x0F, 0)
+#define MFRC522_BMS_AUTOTEST_SELFTEST_SELFTEST              BITS(0x09, 0)
 
 /* Private macro -------------------------------------------------------------*/
 #define BIT(n)          (1 << (n))
@@ -255,11 +261,79 @@ void mfrc522_CommandExecute (mfrc522_Mod* Dev, mfrc522_Command cmd)
  * Performs a self test. How to perform a self reset can be found on the datasheet (Section 16.1.1).
  */
 
-void mfrc522_SelfTest (mfrc522_Mod* Dev)
+mfrc522_result mfrc522_SelfTest (mfrc522_Mod* Dev)
 {
+    uint8_t* data;
+    uint8_t V1[64] = {0x00, 0xC6, 0x37, 0xD5, 0x32, 0xB7, 0x57, 0x5C,
+                      0xC2, 0xD8, 0x7C, 0x4D, 0xD9, 0x70, 0xC7, 0x73,
+                      0x10, 0xE6, 0xD2, 0xAA, 0x5E, 0xA1, 0x3E, 0x5A,
+                      0x14, 0xAF, 0x30, 0x61, 0xC9, 0x70, 0xDB, 0x2E,
+                      0x64, 0x22, 0x72, 0xB5, 0xBD, 0x65, 0xF4, 0xEC,
+                      0x22, 0xBC, 0xD3, 0x72, 0x35, 0xCD, 0xAA, 0x41,
+                      0x1F, 0xA7, 0xF3, 0x53, 0x14, 0xDE, 0x7E, 0x02,
+                      0xD9, 0x0F, 0xB5, 0x5E, 0x25, 0x1D, 0x29, 0x79};
+    uint8_t V2[64] = {0x00, 0xEB, 0x66, 0xBA, 0x57, 0xBF, 0x23, 0x95,
+                      0xD0, 0xE3, 0x0D, 0x3D, 0x27, 0x89, 0x5C, 0xDE,
+                      0x9D, 0x3B, 0xA7, 0x00, 0x21, 0x5B, 0x89, 0x82,
+                      0x51, 0x3A, 0xEB, 0x02, 0x0C, 0xA5, 0x00, 0x49,
+                      0x7C, 0x84, 0x4D, 0xB3, 0xCC, 0xD2, 0x1B, 0x81,
+                      0x5D, 0x48, 0x76, 0xD5, 0x71, 0x61, 0x21, 0xA9,
+                      0x86, 0x96, 0x83, 0x38, 0xCF, 0x9D, 0x5B, 0x6D,
+                      0xDC, 0x15, 0xBA, 0x3E, 0x7D, 0x95, 0x3B, 0x2F};
+    uint8_t temp;
+    mfrc522_result cmd = mfrc522_error;
+
     mfrc522_SoftReset(Dev);
 
+    data = calloc(64, sizeof(uint8_t));
+    if (data == NULL)
+        return mfrc522_nomem;
 
+    mfrc522_IBWrite(Dev, data);
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_AUTOTEST, &temp);
+    temp &= ~(MFRC522_BMS_AUTOTEST_SELFTEST_BITS);
+    temp |= MFRC522_BMS_AUTOTEST_SELFTEST_SELFTEST;
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_AUTOTEST, temp);
+
+    mfrc522_FIFOWrite(Dev, data, 1);
+
+    mfrc522_CommandExecute(Dev, CalcCrc);
+    while (mfrc522_GetCurrentCommand(Dev) != Idle);
+
+    mfrc522_FIFORead(Dev, data, 64);
+
+    if (!(memcmp(data, V1, 64))) {
+        cmd = mfrc522_V2;
+    } else if (!(memcmp(data, V2, 64))) {
+        cmd = mfrc522_V1;
+    }
+
+    return cmd;
+}
+
+/*
+ * Writes 25 bytes from the buffer into the internal memory of the chip.
+ */
+
+void mfrc522_IBWrite (mfrc522_Mod* Dev, uint8_t* buffer)
+{
+    mfrc522_FIFOClear(Dev);
+    mfrc522_FIFOWrite(Dev, buffer, 25);
+    mfrc522_CommandExecute(Dev, Mem);
+    while (mfrc522_GetCurrentCommand(Dev) != Idle);
+}
+
+/*
+ * Reads the internal data from the buffer.
+ */
+
+void mfrc522_IBRead (mfrc522_Mod* Dev, uint8_t* buffer)
+{
+    mfrc522_FIFOClear(Dev);
+    mfrc522_CommandExecute(Dev, Mem);
+    while (mfrc522_GetCurrentCommand(Dev) != Idle);
+    mfrc522_FIFORead(Dev, buffer, 25);
 }
 
 /*

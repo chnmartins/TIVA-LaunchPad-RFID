@@ -95,7 +95,6 @@
 /* Private variables ---------------------------------------------------------*/
 fUart_Mod* UartDbg;
 fSpi_Mod* SpiRfid;
-fGpio_Pin*  NssRfid;
 fGpio_Pin*  RstRfid;
 fGpio_Pin*  IrqRfid;
 mfrc522_Mod* RfidDev;
@@ -478,7 +477,7 @@ bool brd_RfidHwInit (void)
     SpiRfid->ClockSource = FSPI_CLK_SYSTEM;
     SpiRfid->DataWidth = 16;
     SpiRfid->Mode = MODE_MASTER;
-    SpiRfid->BitRate = 800000;
+    SpiRfid->BitRate = 50000;
     SpiRfid->Module = SPI_MOD0;
     SpiRfid->Protocol = PROT_POL0_PHA0;
     SpiRfid->Int = INT_NONE;

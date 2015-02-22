@@ -37,6 +37,9 @@
  {
      mfrc522_ok,
      mfrc522_error,
+     mfrc522_nomem,
+     mfrc522_V1,
+     mfrc522_V2,
  } mfrc522_result;
 
 /* Exported constants --------------------------------------------------------*/
@@ -49,7 +52,9 @@ void mfrc522_HardReset (mfrc522_Mod* Dev);
 void mfrc522_ReadAddress (mfrc522_Mod* Dev, uint8_t address, uint8_t* value);
 void mfrc522_WriteAddress (mfrc522_Mod* Dev, uint8_t address, uint8_t value);
 void mfrc522_SoftReset (mfrc522_Mod* Dev);
-void mfrc522_SelfTest (mfrc522_Mod* Dev);
+mfrc522_result mfrc522_SelfTest (mfrc522_Mod* Dev);
+void mfrc522_IBWrite (mfrc522_Mod* Dev, uint8_t* buffer);
+void mfrc522_IBRead (mfrc522_Mod* Dev, uint8_t* buffer);
 
 #ifdef __cplusplus
 }
