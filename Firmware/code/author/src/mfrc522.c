@@ -309,6 +309,8 @@ mfrc522_result mfrc522_SelfTest (mfrc522_Mod* Dev)
         cmd = mfrc522_V1;
     }
 
+    free(data);
+
     return cmd;
 }
 
