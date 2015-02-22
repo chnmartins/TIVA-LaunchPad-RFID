@@ -382,5 +382,8 @@ uint32_t fGpio_IntGet (fGpio_Pin* const Gpio_Pin)
 
 void fGpio_setAlternateFunction (fGpio_Pin* const Gpio_Pin)
 {
-    GPIOPinConfigure(Gpio_Pin->AlternateFunction);
+    if (Gpio_Pin->AlternateFunction != FGPIO_AF_NOAF)
+    {
+        GPIOPinConfigure(Gpio_Pin->AlternateFunction);
+    }
 }
