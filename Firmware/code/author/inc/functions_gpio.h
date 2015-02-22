@@ -96,6 +96,8 @@ typedef struct
 #define INTTYPE_HIGH_LEVEL      GPIO_HIGH_LEVEL
 #define INTTYPE_DISCRETE_INT    GPIO_DISCRETE_INT
 
+#define FGPIO_AF_NOAF           0x00000000
+
 /* Exported macro ------------------------------------------------------------*/
 
 /* Exported functions --------------------------------------------------------*/
