@@ -48,6 +48,8 @@ mfrc522_result mfrc522_Init (mfrc522_Mod* Dev);
 void mfrc522_HardReset (mfrc522_Mod* Dev);
 void mfrc522_ReadAddress (mfrc522_Mod* Dev, uint8_t address, uint8_t* value);
 void mfrc522_WriteAddress (mfrc522_Mod* Dev, uint8_t address, uint8_t value);
+void mfrc522_SoftReset (mfrc522_Mod* Dev);
+void mfrc522_SelfTest (mfrc522_Mod* Dev);
 
 #ifdef __cplusplus
 }

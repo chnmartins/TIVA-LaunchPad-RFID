@@ -21,8 +21,22 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "mfrc522.h"
+#include "conf.h"
 
 /* Private typedef -----------------------------------------------------------*/
+typedef enum
+{
+    Idle,
+    Mem,
+    GenerateRandomID,
+    CalcCrc,
+    Transmit,
+    NoCmdChange,
+    Receive,
+    Transceive,
+    MFAuthent,
+    SoftReset,
+} mfrc522_Command;
 
 /* Private define ------------------------------------------------------------*/
 #define MFRC522_RST_LOW      0x00
@@ -31,11 +45,38 @@
 #define MFRC522_READ_MSB    0x80
 #define MFRC522_WRITE_MSB   0x00
 
+
+// Commands
+#define MFRC522_CMD_SOFTRESET   (0x0F)
+
+// Register Addresses
+#define MFRC522_ADDR_COMMAND    (0x01)
+
+// Bit masks
+#define MFRC522_BMS_COMMAND_COMMAND_BITS                    BITS(0x0F, 0)
+#define MFRC522_BMS_COMMAND_COMMAND_IDLE                    BITS(0x00, 0)
+#define MFRC522_BMS_COMMAND_COMMAND_MEM                     BITS(0x01, 0)
+#define MFRC522_BMS_COMMAND_COMMAND_GENRANDOMID             BITS(0x02, 0)
+#define MFRC522_BMS_COMMAND_COMMAND_CALCCRC                 BITS(0x03, 0)
+#define MFRC522_BMS_COMMAND_COMMAND_TRANSMIT                BITS(0x04, 0)
+#define MFRC522_BMS_COMMAND_COMMAND_NOCMDCHANGE             BITS(0x07, 0)
+#define MFRC522_BMS_COMMAND_COMMAND_RECEIVE                 BITS(0x08, 0)
+#define MFRC522_BMS_COMMAND_COMMAND_TRANSCEIVE              BITS(0x0C, 0)
+#define MFRC522_BMS_COMMAND_COMMAND_MFAUTHENT               BITS(0x0E, 0)
+#define MFRC522_BMS_COMMAND_COMMAND_SOFTRESET               BITS(0x0F, 0)
+#define MFRC522_BMS_COMMAND_POWERDOWN_BIT                   BIT(4)
+#define MFRC522_BMS_COMMAND_RCVOFF_BIT                      BIT(5)
+
 /* Private macro -------------------------------------------------------------*/
+#define BIT(n)          (1 << (n))
+#define BITS(x, n)      ((x) << (n))
 
 /* Private variables ---------------------------------------------------------*/
 
 /* Private function prototypes -----------------------------------------------*/
+void mfrc522_CommandExecute (mfrc522_Mod* Dev, mfrc522_Command cmd);
+mfrc522_Command mfrc522_GetCurrentCommand (mfrc522_Mod* Dev);
+
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -85,4 +126,127 @@ void mfrc522_HardReset (mfrc522_Mod* Dev)
     Dev->Delay(0.1);
     Dev->RstCtrl(MFRC522_RST_HIGH);
     Dev->Delay(0.1);
+}
+
+/*
+ * Stops the current command and executes a soft reset.
+ */
+
+void mfrc522_SoftReset (mfrc522_Mod* Dev)
+{
+    mfrc522_CommandExecute(Dev, SoftReset);
+    while (mfrc522_GetCurrentCommand(Dev) == Idle);
+}
+
+/*
+ * Returns the current command being executed.
+ */
+
+mfrc522_Command mfrc522_GetCurrentCommand (mfrc522_Mod* Dev)
+{
+    uint8_t temp;
+    mfrc522_Command cmd;
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMMAND, &temp);
+
+    temp &= MFRC522_BMS_COMMAND_COMMAND_BITS;
+
+    switch (temp)
+    {
+    case MFRC522_BMS_COMMAND_COMMAND_IDLE:
+        cmd = Idle;
+        break;
+    case MFRC522_BMS_COMMAND_COMMAND_MEM:
+        cmd = Mem;
+        break;
+    case MFRC522_BMS_COMMAND_COMMAND_GENRANDOMID:
+        cmd = GenerateRandomID;
+        break;
+    case MFRC522_BMS_COMMAND_COMMAND_CALCCRC:
+        cmd = CalcCrc;
+        break;
+    case MFRC522_BMS_COMMAND_COMMAND_TRANSMIT:
+        cmd = Transmit;
+        break;
+    case MFRC522_BMS_COMMAND_COMMAND_NOCMDCHANGE:
+        cmd = NoCmdChange;
+        break;
+    case MFRC522_BMS_COMMAND_COMMAND_RECEIVE:
+        cmd = Receive;
+        break;
+    case MFRC522_BMS_COMMAND_COMMAND_TRANSCEIVE:
+        cmd = Transceive;
+        break;
+    case MFRC522_BMS_COMMAND_COMMAND_MFAUTHENT:
+        cmd = MFAuthent;
+        break;
+    case MFRC522_BMS_COMMAND_COMMAND_SOFTRESET:
+        cmd = SoftReset;
+        break;
+    default:
+        break;
+    }
+
+    return cmd;
+}
+
+/*
+ * Executes the specified command.
+ */
+
+void mfrc522_CommandExecute (mfrc522_Mod* Dev, mfrc522_Command cmd)
+{
+    uint8_t temp;
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMMAND, &temp);
+
+    temp &= ~(MFRC522_BMS_COMMAND_COMMAND_BITS);
+
+    switch (cmd)
+    {
+    case Idle:
+        temp |= MFRC522_BMS_COMMAND_COMMAND_IDLE;
+        break;
+    case Mem:
+        temp |= MFRC522_BMS_COMMAND_COMMAND_MEM;
+        break;
+    case GenerateRandomID:
+        temp |= MFRC522_BMS_COMMAND_COMMAND_GENRANDOMID;
+        break;
+    case CalcCrc:
+        temp |= MFRC522_BMS_COMMAND_COMMAND_CALCCRC;
+        break;
+    case Transmit:
+        temp |= MFRC522_BMS_COMMAND_COMMAND_TRANSMIT;
+        break;
+    case NoCmdChange:
+        temp |= MFRC522_BMS_COMMAND_COMMAND_NOCMDCHANGE;
+        break;
+    case Receive:
+        temp |= MFRC522_BMS_COMMAND_COMMAND_RECEIVE;
+        break;
+    case Transceive:
+        temp |= MFRC522_BMS_COMMAND_COMMAND_TRANSCEIVE;
+        break;
+    case MFAuthent:
+        temp |= MFRC522_BMS_COMMAND_COMMAND_MFAUTHENT;
+        break;
+    case SoftReset:
+        temp |= MFRC522_BMS_COMMAND_COMMAND_SOFTRESET;
+        break;
+    default:
+        break;
+    }
+
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_COMMAND, temp);
+}
+
+/*
+ * Performs a self test. How to perform a self reset can be found on the datasheet (Section 16.1.1).
+ */
+
+void mfrc522_SelfTest (mfrc522_Mod* Dev)
+{
+    mfrc522_SoftReset(Dev);
+
 }
