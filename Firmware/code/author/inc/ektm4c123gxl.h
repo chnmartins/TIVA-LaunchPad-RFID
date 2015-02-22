@@ -59,8 +59,9 @@ void brd_UartParse (uint8_t UARTx);
 void brd_delay (double sTime);
 bool brd_RfidHwInit (void);
 bool brd_RfidInit (void);
-void brd_RfidSend (uint8_t sData);
-void brd_RfidRead (uint8_t* rData);
+void brd_RfidWriteAddress (uint8_t address, uint8_t value);
+void brd_RfidReadAddress (uint8_t address, uint8_t* value);
+void brd_RfidRstControl (uint8_t status);
 
 #ifdef __cplusplus
 }

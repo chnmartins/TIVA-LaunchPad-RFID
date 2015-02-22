@@ -39,8 +39,8 @@ typedef enum
 } mfrc522_Command;
 
 /* Private define ------------------------------------------------------------*/
-#define MFRC522_RST_LOW      0x00
-#define MFRC522_RST_HIGH     0x01
+#define MFRC522_GPIO_LOW      0x00
+#define MFRC522_GPIO_HIGH     0x01
 
 #define MFRC522_READ_MSB    0x80
 #define MFRC522_WRITE_MSB   0x00
@@ -69,8 +69,8 @@ typedef enum
 #define MFRC522_BMS_COMMAND_POWERDOWN_BIT                   BIT(4)
 #define MFRC522_BMS_COMMAND_RCVOFF_BIT                      BIT(5)
 
-#define MFRC522_BMS_FIFOLEVEL_FIFOLEVEL_BITS                     BITS(0x7F, 0)
-#define MFRC522_BMS_FIFOLEVEL_FLUSHBUFFER_BIT                   BIT(0x07)
+#define MFRC522_BMS_FIFOLEVEL_FIFOLEVEL_BITS                BITS(0x7F, 0)
+#define MFRC522_BMS_FIFOLEVEL_FLUSHBUFFER_BIT               BIT(0x07)
 
 /* Private macro -------------------------------------------------------------*/
 #define BIT(n)          (1 << (n))
@@ -112,8 +112,7 @@ mfrc522_result mfrc522_Init (mfrc522_Mod* Dev)
 
 void mfrc522_ReadAddress (mfrc522_Mod* Dev, uint8_t address, uint8_t* value)
 {
-    Dev->SendByte(MFRC522_READ_MSB | (address << 1));
-    Dev->ReadByte(value);
+    Dev->ReadAddress(MFRC522_READ_MSB | (address << 1), value);
 }
 
 /*
@@ -122,8 +121,7 @@ void mfrc522_ReadAddress (mfrc522_Mod* Dev, uint8_t address, uint8_t* value)
 
 void mfrc522_WriteAddress (mfrc522_Mod* Dev, uint8_t address, uint8_t value)
 {
-    Dev->SendByte(MFRC522_WRITE_MSB | (address << 1));
-    Dev->SendByte(value);
+    Dev->WriteAddress(MFRC522_WRITE_MSB | (address << 1), value);
 }
 
 /*
@@ -133,9 +131,9 @@ void mfrc522_WriteAddress (mfrc522_Mod* Dev, uint8_t address, uint8_t value)
 void mfrc522_HardReset (mfrc522_Mod* Dev)
 {
     Dev->Delay(0.1);
-    Dev->RstCtrl(MFRC522_RST_LOW);
+    Dev->RstCtrl(MFRC522_GPIO_LOW);
     Dev->Delay(0.1);
-    Dev->RstCtrl(MFRC522_RST_HIGH);
+    Dev->RstCtrl(MFRC522_GPIO_HIGH);
     Dev->Delay(0.1);
 }
 
@@ -261,12 +259,6 @@ void mfrc522_SelfTest (mfrc522_Mod* Dev)
 {
     mfrc522_SoftReset(Dev);
 
-    uint8_t data[] = {0x01, 0x02, 0x03, 0x04, 0x05};
-    uint8_t datalength = 5;
-
-    mfrc522_FIFOClear(Dev);
-    mfrc522_FIFOWrite(Dev, data, datalength);
-    mfrc522_FIFORead(Dev, data, datalength);
 
 }
 

@@ -28,9 +28,9 @@
  {
      void (*Delay) (double seconds);
      bool (*HwInit) (void);
-     void (*RstCtrl) (uint8_t MFRC522_RSTx);
-     void (*SendByte) (uint8_t sData);
-     void (*ReadByte) (uint8_t* rData);
+     void (*RstCtrl) (uint8_t status);
+     void (*ReadAddress) (uint8_t address, uint8_t* value);
+     void (*WriteAddress) (uint8_t address, uint8_t value);
  } mfrc522_Mod;
 
  typedef enum

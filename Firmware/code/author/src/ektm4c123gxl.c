@@ -95,6 +95,7 @@
 /* Private variables ---------------------------------------------------------*/
 fUart_Mod* UartDbg;
 fSpi_Mod* SpiRfid;
+fGpio_Pin*  NssRfid;
 fGpio_Pin*  RstRfid;
 fGpio_Pin*  IrqRfid;
 mfrc522_Mod* RfidDev;
@@ -452,7 +453,7 @@ bool brd_RfidHwInit (void)
         (*(SpiRfid->Pins + i)) = (fGpio_Pin*) calloc(1, sizeof(fGpio_Pin));
         if ((*(SpiRfid->Pins + i)) == (fGpio_Pin*) NULL)
             return false;
-        (*(SpiRfid->Pins + 0))->Type = TYPE_PP_PD;
+        (*(SpiRfid->Pins + i))->Type = TYPE_PP_PD;
         (*(SpiRfid->Pins + i))->Direction = DIR_HW;
         (*(SpiRfid->Pins + i))->Current = CURR_2MA;
     }
@@ -471,13 +472,13 @@ bool brd_RfidHwInit (void)
 
     (*(SpiRfid->Pins + 3))->Pin = SPIRFID_NSS_PIN;
     (*(SpiRfid->Pins + 3))->Port = SPIRFID_NSS_PORT;
+    (*(SpiRfid->Pins + 3))->AlternateFunction = SPIRFID_NSS_AF;
     (*(SpiRfid->Pins + 3))->Type = TYPE_PP_PU;
-    (*(SpiRfid->Pins + i))->Direction = DIR_OUT;
 
     SpiRfid->ClockSource = FSPI_CLK_SYSTEM;
-    SpiRfid->DataWidth = 8;
+    SpiRfid->DataWidth = 16;
     SpiRfid->Mode = MODE_MASTER;
-    SpiRfid->BitRate = 100000;
+    SpiRfid->BitRate = 800000;
     SpiRfid->Module = SPI_MOD0;
     SpiRfid->Protocol = PROT_POL0_PHA0;
     SpiRfid->Int = INT_NONE;
@@ -498,26 +499,32 @@ bool brd_RfidHwInit (void)
 }
 
 /*
- * Sends a byte and receives a byte over the SPI peripheral linked to the RFID device.
+ * Function to write an address.
  */
 
-void brd_RfidSend (uint8_t sData)
+void brd_RfidWriteAddress (uint8_t address, uint8_t value)
 {
     // SPI fifo gets cleared by reading the byte.
-    uint32_t a = 0;
-    fSpi_SendReceive(SpiRfid, (uint32_t) sData, &a);
+    uint32_t a = (address << 8) | value;
+    uint32_t b = 0;
+
+    fSpi_SendReceive(SpiRfid, a, &b);
 }
 
 /*
- * Sends a byte and receives a byte over the SPI peripheral linked to the RFID device.
+ * Function to read an address.
  */
 
-void brd_RfidRead (uint8_t* rData)
+void brd_RfidReadAddress (uint8_t address, uint8_t* value)
 {
     // Send a random character to generate the clock pulses.
     // Send 0x80, it equals read address 0x00 on the device.
-    uint32_t a = 0x80;
-    fSpi_SendReceive(SpiRfid, a, (uint32_t*) rData);
+    uint32_t a = (address << 8) | 0x00;
+    uint32_t b = 0;
+
+    fSpi_SendReceive(SpiRfid, a, &b);
+
+    *value = (uint8_t) (b & 0x000000FF);
 }
 
 /*
@@ -547,8 +554,8 @@ bool brd_RfidInit (void)
     RfidDev->Delay = brd_delay;
     RfidDev->HwInit = brd_RfidHwInit;
     RfidDev->RstCtrl = brd_RfidRstControl;
-    RfidDev->SendByte = brd_RfidSend;
-    RfidDev->ReadByte = brd_RfidRead;
+    RfidDev->WriteAddress = brd_RfidWriteAddress;
+    RfidDev->ReadAddress = brd_RfidReadAddress;
 
     mfrc522_Init(RfidDev);
 
