@@ -452,6 +452,7 @@ bool brd_RfidHwInit (void)
         (*(SpiRfid->Pins + i)) = (fGpio_Pin*) calloc(1, sizeof(fGpio_Pin));
         if ((*(SpiRfid->Pins + i)) == (fGpio_Pin*) NULL)
             return false;
+        (*(SpiRfid->Pins + 0))->Type = TYPE_PP_PD;
         (*(SpiRfid->Pins + i))->Direction = DIR_HW;
         (*(SpiRfid->Pins + i))->Current = CURR_2MA;
     }
@@ -459,22 +460,19 @@ bool brd_RfidHwInit (void)
     (*(SpiRfid->Pins + 0))->Pin = SPIRFID_MISO_PIN;
     (*(SpiRfid->Pins + 0))->Port = SPIRFID_MISO_PORT;
     (*(SpiRfid->Pins + 0))->AlternateFunction = SPIRFID_MISO_AF;
-    (*(SpiRfid->Pins + 0))->Type = TYPE_PP_PD;
 
     (*(SpiRfid->Pins + 1))->Pin = SPIRFID_MOSI_PIN;
     (*(SpiRfid->Pins + 1))->Port = SPIRFID_MOSI_PORT;
     (*(SpiRfid->Pins + 1))->AlternateFunction = SPIRFID_MOSI_AF;
-    (*(SpiRfid->Pins + 1))->Type = TYPE_PP_PD;
 
     (*(SpiRfid->Pins + 2))->Pin = SPIRFID_CLK_PIN;
     (*(SpiRfid->Pins + 2))->Port = SPIRFID_CLK_PORT;
     (*(SpiRfid->Pins + 2))->AlternateFunction = SPIRFID_CLK_AF;
-    (*(SpiRfid->Pins + 2))->Type = TYPE_PP_PD;
 
     (*(SpiRfid->Pins + 3))->Pin = SPIRFID_NSS_PIN;
     (*(SpiRfid->Pins + 3))->Port = SPIRFID_NSS_PORT;
-    (*(SpiRfid->Pins + 3))->AlternateFunction = SPIRFID_NSS_AF;
     (*(SpiRfid->Pins + 3))->Type = TYPE_PP_PU;
+    (*(SpiRfid->Pins + i))->Direction = DIR_OUT;
 
     SpiRfid->ClockSource = FSPI_CLK_SYSTEM;
     SpiRfid->DataWidth = 8;
@@ -495,13 +493,6 @@ bool brd_RfidHwInit (void)
     RstRfid->Direction = DIR_OUT;
     RstRfid->Type = TYPE_PP_PU;
     fGpio_Init(RstRfid);
-
-    for (i = 0; i < SpiRfid->nPins; i++)
-    {
-        free(*(SpiRfid->Pins + i));
-    }
-
-    free(SpiRfid->Pins);
 
     return true;
 }

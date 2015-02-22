@@ -50,7 +50,9 @@ typedef enum
 #define MFRC522_CMD_SOFTRESET   (0x0F)
 
 // Register Addresses
-#define MFRC522_ADDR_COMMAND    (0x01)
+#define MFRC522_ADDR_COMMAND        (0x01)
+#define MFRC522_ADDR_FIFODATA       (0x09)
+#define MFRC522_ADDR_FIFOLEVEL      (0x0A)
 
 // Bit masks
 #define MFRC522_BMS_COMMAND_COMMAND_BITS                    BITS(0x0F, 0)
@@ -67,6 +69,9 @@ typedef enum
 #define MFRC522_BMS_COMMAND_POWERDOWN_BIT                   BIT(4)
 #define MFRC522_BMS_COMMAND_RCVOFF_BIT                      BIT(5)
 
+#define MFRC522_BMS_FIFOLEVEL_FIFOLEVEL_BITS                     BITS(0x7F, 0)
+#define MFRC522_BMS_FIFOLEVEL_FLUSHBUFFER_BIT                   BIT(0x07)
+
 /* Private macro -------------------------------------------------------------*/
 #define BIT(n)          (1 << (n))
 #define BITS(x, n)      ((x) << (n))
@@ -76,7 +81,10 @@ typedef enum
 /* Private function prototypes -----------------------------------------------*/
 void mfrc522_CommandExecute (mfrc522_Mod* Dev, mfrc522_Command cmd);
 mfrc522_Command mfrc522_GetCurrentCommand (mfrc522_Mod* Dev);
-
+uint8_t mfrc522_FIFOGetLevel (mfrc522_Mod* Dev);
+void mfrc522_FIFORead (mfrc522_Mod* Dev, uint8_t* buffer, uint8_t bytestoread);
+void mfrc522_FIFOWrite (mfrc522_Mod* Dev, uint8_t* buffer, uint8_t bytestowrite);
+void mfrc522_FIFOClear (mfrc522_Mod* Dev);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -92,6 +100,8 @@ mfrc522_result mfrc522_Init (mfrc522_Mod* Dev)
         res = mfrc522_error;
     else
         mfrc522_HardReset(Dev);
+
+    mfrc522_SelfTest(Dev);
 
     return res;
 }
@@ -122,6 +132,7 @@ void mfrc522_WriteAddress (mfrc522_Mod* Dev, uint8_t address, uint8_t value)
 
 void mfrc522_HardReset (mfrc522_Mod* Dev)
 {
+    Dev->Delay(0.1);
     Dev->RstCtrl(MFRC522_RST_LOW);
     Dev->Delay(0.1);
     Dev->RstCtrl(MFRC522_RST_HIGH);
@@ -135,7 +146,8 @@ void mfrc522_HardReset (mfrc522_Mod* Dev)
 void mfrc522_SoftReset (mfrc522_Mod* Dev)
 {
     mfrc522_CommandExecute(Dev, SoftReset);
-    while (mfrc522_GetCurrentCommand(Dev) == Idle);
+    Dev->Delay(0.1);
+    while (mfrc522_GetCurrentCommand(Dev) != Idle);
 }
 
 /*
@@ -249,4 +261,81 @@ void mfrc522_SelfTest (mfrc522_Mod* Dev)
 {
     mfrc522_SoftReset(Dev);
 
+    uint8_t data[] = {0x01, 0x02, 0x03, 0x04, 0x05};
+    uint8_t datalength = 5;
+
+    mfrc522_FIFOClear(Dev);
+    mfrc522_FIFOWrite(Dev, data, datalength);
+    mfrc522_FIFORead(Dev, data, datalength);
+
+}
+
+/*
+ * Writes the specified bytes on the FIFO. The FIFO capacity is 64 bytes.
+ */
+
+void mfrc522_FIFOWrite (mfrc522_Mod* Dev, uint8_t* buffer, uint8_t bytestowrite)
+{
+    uint8_t FifoLevel = 0;
+    uint8_t i = 0;
+
+    FifoLevel = mfrc522_FIFOGetLevel(Dev);
+
+    while (FifoLevel < 64 && (i < bytestowrite))
+    {
+        mfrc522_WriteAddress(Dev, MFRC522_ADDR_FIFODATA, *(buffer + i));
+        while (FifoLevel == mfrc522_FIFOGetLevel(Dev));
+        FifoLevel = mfrc522_FIFOGetLevel(Dev);
+        i++;
+    }
+}
+
+/*
+ * Clears the FIFO, write and read pointers become zero.
+ */
+
+void mfrc522_FIFOClear (mfrc522_Mod* Dev)
+{
+    uint8_t temp;
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_FIFOLEVEL, &temp);
+
+    temp |= MFRC522_BMS_FIFOLEVEL_FLUSHBUFFER_BIT;
+
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_FIFOLEVEL, temp);
+
+    while (mfrc522_FIFOGetLevel(Dev) > 0);
+}
+
+/*
+ * Gets the current level on the FIFO.
+ */
+
+uint8_t mfrc522_FIFOGetLevel (mfrc522_Mod* Dev)
+{
+    uint8_t temp = 0;
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_FIFOLEVEL, &temp);
+
+    temp &= MFRC522_BMS_FIFOLEVEL_FIFOLEVEL_BITS;
+
+    return temp;
+}
+
+/*
+ * Reads data from the FIFO.
+ */
+
+void mfrc522_FIFORead (mfrc522_Mod* Dev, uint8_t* buffer, uint8_t bytestoread)
+{
+    uint8_t FifoLevel = mfrc522_FIFOGetLevel(Dev);
+    uint8_t i = 0;
+
+    while (FifoLevel > 0 && (i < bytestoread))
+    {
+        mfrc522_ReadAddress(Dev, MFRC522_ADDR_FIFODATA, buffer + i);
+        while (FifoLevel == mfrc522_FIFOGetLevel(Dev));
+        FifoLevel = mfrc522_FIFOGetLevel(Dev);
+        i++;
+    }
 }
