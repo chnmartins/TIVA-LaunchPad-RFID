@@ -48,6 +48,17 @@ typedef enum
 	Speed_848kBd,
 } mfrc522_Speed;
 
+typedef enum
+{
+	Modem_Idle,
+	Modem_WaitForStartSend,
+	Modem_TransmitterWaitingForRFField,
+	Modem_Transmitting,
+	Modem_ReceiverWaitingForRFField,
+	Modem_WaitForData,
+	Modem_Receiving,
+} mfrc522_Modem;
+
 /* Private define ------------------------------------------------------------*/
 #define MFRC522_GPIO_LOW      0x00
 #define MFRC522_GPIO_HIGH     0x01
@@ -64,6 +75,7 @@ typedef enum
 #define MFRC522_ADDR_COMIEN         (0x02)
 #define MFRC522_ADDR_COMIRQ         (0x04)
 #define MFRC522_ADDR_STATUS1        (0x07)
+#define MFRC522_ADDR_STATUS2		(0x08)
 #define MFRC522_ADDR_FIFODATA       (0x09)
 #define MFRC522_ADDR_FIFOLEVEL      (0x0A)
 #define MFRC522_ADDR_CONTROL        (0x0C)
@@ -143,6 +155,15 @@ typedef enum
 #define MFRC522_BMS_STATUS1_HIALERT_BIT                      BIT(1)
 #define MFRC522_BMS_STATUS1_LOALERT_BIT                      BIT(0)
 
+#define MFRC522_BMS_STATUS2_MODEMSTATE_BITS					BITS(0x07, 0)
+#define MFRC522_BMS_STATUS2_MODEMSTATE_IDLE					BITS(0x00, 0)
+#define MFRC522_BMS_STATUS2_MODEMSTATE_WAIT_STARTSEND		BITS(0x01, 0)
+#define MFRC522_BMS_STATUS2_MODEMSTATE_TX_WAIT_RF			BITS(0x02, 0)
+#define MFRC522_BMS_STATUS2_MODEMSTATE_TX_TRANSMITTING		BITS(0x03, 0)
+#define MFRC522_BMS_STATUS2_MODEMSTATE_RX_WAIT_RF			BITS(0x04, 0)
+#define MFRC522_BMS_STATUS2_MODEMSTATE_WAIT_FOR_DATA		BITS(0x05, 0)
+#define MFRC522_BMS_STATUS2_MODEMSTATE_RECEIVING			BITS(0x06, 0)
+
 #define	MFRC522_BMS_BITFRAMING_STARTSEND_BIT				 BIT(7)
 #define	MFRC522_BMS_BITFRAMING_RXALIGN_BITS				 	 BITS(0x07, 4)
 #define MFRC522_BMS_BITFRAMING_RXALIGN(x)					 BITS((x), 4)
@@ -204,6 +225,8 @@ void mfrc522_FIFOClear (mfrc522_Mod* Dev);
 
 void mfrc522_TransmitterSetSpeed (mfrc522_Mod* Dev, mfrc522_Speed speed);
 mfrc522_Speed mfrc522_TransmitterGetSpeed (mfrc522_Mod* Dev);
+
+mfrc522_Modem mfrc522_ModemGetStatus (mfrc522_Mod* Dev);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -451,6 +474,49 @@ void mfrc522_Initialization (mfrc522_Mod* Dev)
     mfrc522_EnableParity(Dev, false);
     mfrc522_TransmitterSetBits(Dev, 7);
 
+}
+
+/*
+ * Returns the current status of the receiver and transmitter state machines.
+ */
+
+mfrc522_Modem mfrc522_ModemGetStatus (mfrc522_Mod* Dev)
+{
+	uint8_t temp;
+	mfrc522_Modem status;
+
+	mfrc522_ReadAddress(Dev, MFRC522_ADDR_STATUS2, &temp);
+
+	temp &= ~(MFRC522_BMS_STATUS2_MODEMSTATE_BITS);
+
+	switch (temp)
+	{
+	case MFRC522_BMS_STATUS2_MODEMSTATE_IDLE:
+		status = Modem_Idle;
+		break;
+	case MFRC522_BMS_STATUS2_MODEMSTATE_RECEIVING:
+		status = Modem_Receiving;
+		break;
+	case MFRC522_BMS_STATUS2_MODEMSTATE_RX_WAIT_RF:
+		status = Modem_ReceiverWaitingForRFField;
+		break;
+	case MFRC522_BMS_STATUS2_MODEMSTATE_TX_TRANSMITTING:
+		status = Modem_Transmitting;
+		break;
+	case MFRC522_BMS_STATUS2_MODEMSTATE_TX_WAIT_RF:
+		status = Modem_TransmitterWaitingForRFField;
+		break;
+	case MFRC522_BMS_STATUS2_MODEMSTATE_WAIT_FOR_DATA:
+		status = Modem_WaitForData;
+		break;
+	case MFRC522_BMS_STATUS2_MODEMSTATE_WAIT_STARTSEND:
+		status = Modem_WaitForStartSend;
+		break;
+	default:
+		break;
+	}
+
+	return status;
 }
 
 /*
