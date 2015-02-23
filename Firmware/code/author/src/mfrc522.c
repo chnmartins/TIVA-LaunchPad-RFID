@@ -40,6 +40,14 @@ typedef enum
     SoftReset,
 } mfrc522_Command;
 
+typedef enum
+{
+	Speed_106kBd,
+	Speed_212kBd,
+	Speed_424kBd,
+	Speed_848kBd,
+} mfrc522_Speed;
+
 /* Private define ------------------------------------------------------------*/
 #define MFRC522_GPIO_LOW      0x00
 #define MFRC522_GPIO_HIGH     0x01
@@ -59,7 +67,13 @@ typedef enum
 #define MFRC522_ADDR_FIFODATA       (0x09)
 #define MFRC522_ADDR_FIFOLEVEL      (0x0A)
 #define MFRC522_ADDR_CONTROL        (0x0C)
+#define	MFRC522_ADDR_BITFRAMING		(0x0D)
+#define MFRC522_ADDR_MODE			(0x11)
+#define	MFRC522_ADDR_TXMODE			(0x12)
+#define MFRC522_ADDR_TXCONTROL		(0x14)
+#define MFRC522_ADDR_TXASK			(0x15)
 #define MFRC522_ADDR_DEMOD          (0x19)
+#define MFRC522_ADDR_MFRX			(0x1D)
 #define MFRC522_ADDR_TMODE          (0x2A)
 #define MFRC522_ADDR_TPRESCALERLO   (0x2B)
 #define MFRC522_ADDR_TRELOADHI      (0x2C)
@@ -129,6 +143,34 @@ typedef enum
 #define MFRC522_BMS_STATUS1_HIALERT_BIT                      BIT(1)
 #define MFRC522_BMS_STATUS1_LOALERT_BIT                      BIT(0)
 
+#define	MFRC522_BMS_BITFRAMING_STARTSEND_BIT				 BIT(7)
+#define	MFRC522_BMS_BITFRAMING_RXALIGN_BITS				 	 BITS(0x07, 4)
+#define MFRC522_BMS_BITFRAMING_RXALIGN(x)					 BITS((x), 4)
+#define MFRC522_BMS_BITFRAMING_TXLASTBITS_BITS				 BITS(0x07, 0)
+#define MFRC522_BMS_BITFRAMING_TXLASTBITS(x)				 BITS((x), 0)
+
+#define MFRC522_BMS_MODE_TXWAITRF_BIT						 BIT(5)
+
+#define MFRC522_BMS_TXMODE_TXCRCEN_BIT						 BIT(7)
+#define MFRC522_BMS_TXMODE_TXSPEED_BITS						 BITS(0x07, 4)
+#define MFRC522_BMS_TXMODE_TXSPEED_106KBD					 BITS(0x00, 4)
+#define MFRC522_BMS_TXMODE_TXSPEED_212KBD					 BITS(0x01, 4)
+#define MFRC522_BMS_TXMODE_TXSPEED_424KBD					 BITS(0x02, 4)
+#define MFRC522_BMS_TXMODE_TXSPEED_848KBD					 BITS(0x03, 4)
+#define MFRC522_BMS_TXMODE_INVMOD_BIT						 BIT(3)
+
+#define MFRC522_BMS_TXCONTROL_INVTX2RFON_BIT				BIT(7)
+#define MFRC522_BMS_TXCONTROL_INVTX1RFON_BIT				BIT(6)
+#define MFRC522_BMS_TXCONTROL_INVTX2RFOFF_BIT				BIT(5)
+#define MFRC522_BMS_TXCONTROL_INVTX1RFOFF_BIT				BIT(4)
+#define MFRC522_BMS_TXCONTROL_TX2CW_BIT				BIT(3)
+#define MFRC522_BMS_TXCONTROL_TX2RFEN_BIT				BIT(1)
+#define MFRC522_BMS_TXCONTROL_TX1RFEN_BIT				BIT(0)
+
+#define MFRC522_BMS_TXASK_FORCE100ASK_BIT				BIT(6)
+
+#define MFRC522_BMS_MFRX_PARITYDISABLE_BIT				BIT(4)
+
 // Other defines
 #define MFRC522_TIMER_OPT_AUTO                           (0x01)
 #define MFRC522_TIMER_OPT_GATED_MFIN                     (0x02)
@@ -136,6 +178,14 @@ typedef enum
 #define MFRC522_TIMER_OPT_AUTOLOAD                       (0x08)
 #define MFRC522_TIMER_OPT_EVENPRESCALER                  (0x10)
 #define MFRC522_TIMER_OPT_INT                            (0x20)
+
+#define MFRC522_ANTENNA_OPT_TX1_MODULATED				 (0x01)
+#define MFRC522_ANTENNA_OPT_TX2_MODULATED				 (0x02)
+#define MFRC522_ANTENNA_OPT_TX2_UNMODULATED				 (0x04)
+#define MFRC522_ANTENNA_OPT_TX1_INVERTED_WHEN_OFF		 (0x08)
+#define MFRC522_ANTENNA_OPT_TX2_INVERTED_WHEN_OFF		 (0x10)
+#define MFRC522_ANTENNA_OPT_TX1_INVERTED_WHEN_ON		 (0x20)
+#define MFRC522_ANTENNA_OPT_TX2_INVERTED_WHEN_ON		 (0x40)
 
 /* Private macro -------------------------------------------------------------*/
 #define BIT(n)          (1 << (n))
@@ -146,10 +196,14 @@ typedef enum
 /* Private function prototypes -----------------------------------------------*/
 void mfrc522_CommandExecute (mfrc522_Mod* Dev, mfrc522_Command cmd);
 mfrc522_Command mfrc522_GetCurrentCommand (mfrc522_Mod* Dev);
+
 uint8_t mfrc522_FIFOGetLevel (mfrc522_Mod* Dev);
 void mfrc522_FIFORead (mfrc522_Mod* Dev, uint8_t* buffer, uint8_t bytestoread);
 void mfrc522_FIFOWrite (mfrc522_Mod* Dev, uint8_t* buffer, uint8_t bytestowrite);
 void mfrc522_FIFOClear (mfrc522_Mod* Dev);
+
+void mfrc522_TransmitterSetSpeed (mfrc522_Mod* Dev, mfrc522_Speed speed);
+mfrc522_Speed mfrc522_TransmitterGetSpeed (mfrc522_Mod* Dev);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -382,6 +436,255 @@ mfrc522_result mfrc522_SelfTest (mfrc522_Mod* Dev)
 void mfrc522_Initialization (mfrc522_Mod* Dev)
 {
     mfrc522_SoftReset(Dev);
+
+    // Set the timer managed by the protocol, 15 ms time.
+    mfrc522_TimerConfigure(Dev, MFRC522_TIMER_OPT_AUTO);
+    mfrc522_TimerSetParams(Dev, 3390, 30);
+
+    // Force 100 ASK modulation on PCD to PICC.
+    mfrc522_TransmitterForce100ASK(Dev, true);
+
+    // Turn on the Antenna.
+    mfrc522_AntennaSettings(Dev, MFRC522_ANTENNA_OPT_TX2_INVERTED_WHEN_ON | MFRC522_ANTENNA_OPT_TX1_MODULATED | MFRC522_ANTENNA_OPT_TX2_MODULATED);
+
+    // Configure transmitter for short frames.
+    mfrc522_EnableParity(Dev, false);
+    mfrc522_TransmitterSetBits(Dev, 7);
+
+}
+
+/*
+ * Enables or disables the transmitter interrupt on the Chip.
+ */
+
+void mfrc522_TransmitterIntEnable (mfrc522_Mod* Dev, bool status)
+{
+	uint8_t temp;
+
+	mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMIEN, &temp);
+	if (status)
+		temp |= MFRC522_BMS_COMIEN_TXIEN_BIT;
+	else
+		temp &= ~MFRC522_BMS_COMIEN_TXIEN_BIT;
+	mfrc522_WriteAddress(Dev, MFRC522_ADDR_COMIEN, temp);
+}
+
+/*
+ * Checks if the last bit of the transmitted data was sent out.
+ */
+
+bool mfrc522_TransmitterIsFinished (mfrc522_Mod* Dev)
+{
+	uint8_t temp;
+
+	mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMIRQ, &temp);
+	if (temp & MFRC522_BMS_COMIRQ_TXIRQ_BIT)
+		return true;
+
+	return false;
+}
+
+/*
+ * Defines the number of bits of the last byte that will be transmitted. Meant to be used with bit-oriented frames.
+ *
+ * A value of zero indicates all the bits of the last byte will be transmitted.
+ */
+
+void mfrc522_TransmitterSetBits (mfrc522_Mod* Dev, uint8_t nBits)
+{
+	uint8_t temp;
+
+	mfrc522_ReadAddress(Dev, MFRC522_ADDR_BITFRAMING, &temp);
+	temp &= ~(MFRC522_BMS_BITFRAMING_TXLASTBITS_BITS);
+	temp |= MFRC522_BMS_BITFRAMING_TXLASTBITS((nBits & 0x07));
+	mfrc522_WriteAddress(Dev, MFRC522_ADDR_BITFRAMING, temp);
+}
+
+/*
+ * If enabled, transmitter can only be started if an RF field is generated.
+ */
+
+void mfrc522_TransmitterWaitsRF (mfrc522_Mod* Dev, bool status)
+{
+	uint8_t temp;
+
+	mfrc522_ReadAddress(Dev, MFRC522_ADDR_MODE, &temp);
+	if (status)
+		temp |= MFRC522_BMS_MODE_TXWAITRF_BIT;
+	else
+		temp &= ~(MFRC522_BMS_MODE_TXWAITRF_BIT);
+	mfrc522_WriteAddress(Dev, MFRC522_ADDR_MODE, temp);
+}
+
+/*
+ * Enables or disables CRC generation during transmission.
+ */
+
+void mfrc522_TransmitterEnableCRC (mfrc522_Mod* Dev, bool status)
+{
+	uint8_t temp;
+
+	mfrc522_ReadAddress(Dev, MFRC522_ADDR_TXMODE, &temp);
+	if (status)
+		temp |= MFRC522_BMS_TXMODE_TXCRCEN_BIT;
+	else
+		temp &= ~(MFRC522_BMS_TXMODE_TXCRCEN_BIT);
+	mfrc522_WriteAddress(Dev, MFRC522_ADDR_TXMODE, temp);
+}
+
+/*
+ * Sets the speed for the transmitter.
+ */
+
+void mfrc522_TransmitterSetSpeed (mfrc522_Mod* Dev, mfrc522_Speed speed)
+{
+	uint8_t temp;
+
+	mfrc522_ReadAddress(Dev, MFRC522_ADDR_TXMODE, &temp);
+	temp &= ~(MFRC522_BMS_TXMODE_TXSPEED_BITS);
+	switch (speed)
+	{
+	case Speed_106kBd:
+		temp |= MFRC522_BMS_TXMODE_TXSPEED_106KBD;
+		break;
+	case Speed_212kBd:
+		temp |= MFRC522_BMS_TXMODE_TXSPEED_212KBD;
+		break;
+	case Speed_424kBd:
+		temp |= MFRC522_BMS_TXMODE_TXSPEED_424KBD;
+		break;
+	case Speed_848kBd:
+		temp |= MFRC522_BMS_TXMODE_TXSPEED_848KBD;
+		break;
+	default:
+		break;
+	}
+	mfrc522_WriteAddress(Dev, MFRC522_ADDR_TXMODE, temp);
+}
+
+/*
+ * Get the speed of the transmitter.
+ */
+
+mfrc522_Speed mfrc522_TransmitterGetSpeed (mfrc522_Mod* Dev)
+{
+	uint8_t temp;
+	mfrc522_Speed speed;
+
+	mfrc522_ReadAddress(Dev, MFRC522_ADDR_TXMODE, &temp);
+	temp &= MFRC522_BMS_TXMODE_TXSPEED_BITS;
+	switch (temp)
+	{
+	case MFRC522_BMS_TXMODE_TXSPEED_106KBD:
+		speed = Speed_106kBd;
+		break;
+	case MFRC522_BMS_TXMODE_TXSPEED_212KBD:
+		speed = Speed_212kBd;
+		break;
+	case MFRC522_BMS_TXMODE_TXSPEED_424KBD:
+		speed = Speed_424kBd;
+		break;
+	case MFRC522_BMS_TXMODE_TXSPEED_848KBD:
+		speed = Speed_848kBd;
+		break;
+	default:
+		break;
+	}
+
+	return speed;
+}
+
+/*
+ * Forces 100% ASK Modulation independent of other settings.
+ */
+
+void mfrc522_TransmitterForce100ASK (mfrc522_Mod* Dev, bool status)
+{
+	uint8_t temp;
+
+	mfrc522_ReadAddress(Dev, MFRC522_ADDR_TXASK, &temp);
+	if (status)
+		temp |= MFRC522_BMS_TXASK_FORCE100ASK_BIT;
+	else
+		temp &= ~(MFRC522_BMS_TXASK_FORCE100ASK_BIT);
+	mfrc522_WriteAddress(Dev, MFRC522_ADDR_TXMODE, temp);
+}
+
+/*
+ * Controls the behaviour of the pins TX1 and TX2 that drive the antenna.
+ *
+ * Options is an 8 bit packed variable with the following information, from right to left:
+ *
+ * [0]: TxControl Tx1RFEn bit
+ * [1]: TxControl Tx2RFEn bit
+ * [2]: TxControl Tx2CW bit
+ * [3]: TxControl InvTx1RFOff bit
+ * [4]: TxControl InvTx2RFOff bit
+ * [5]: TxControl InvTx1RFOn bit
+ * [6]: TxControl InvTx2RFOn bit
+ *
+ * Use a logical OR of MFRC522_ANTENNA_OPTx defines.
+ */
+
+void mfrc522_AntennaSettings (mfrc522_Mod* Dev, uint8_t options)
+{
+	uint8_t temp;
+
+	mfrc522_ReadAddress(Dev, MFRC522_ADDR_TXCONTROL, &temp);
+
+
+	if (options & MFRC522_ANTENNA_OPT_TX1_MODULATED)
+		temp |= MFRC522_BMS_TXCONTROL_TX1RFEN_BIT;
+	else
+		temp &= ~(MFRC522_BMS_TXCONTROL_TX1RFEN_BIT);
+
+	if (options & MFRC522_ANTENNA_OPT_TX2_MODULATED)
+		temp |= MFRC522_BMS_TXCONTROL_TX2RFEN_BIT;
+	else
+		temp &= ~(MFRC522_BMS_TXCONTROL_TX2RFEN_BIT);
+
+	if (options & MFRC522_ANTENNA_OPT_TX2_UNMODULATED)
+		temp |= MFRC522_BMS_TXCONTROL_TX2CW_BIT;
+	else
+		temp &= ~(MFRC522_BMS_TXCONTROL_TX2CW_BIT);
+
+	if (options & MFRC522_ANTENNA_OPT_TX1_INVERTED_WHEN_OFF)
+		temp |= MFRC522_BMS_TXCONTROL_INVTX1RFOFF_BIT;
+	else
+		temp &= ~(MFRC522_BMS_TXCONTROL_INVTX1RFOFF_BIT);
+
+	if (options & MFRC522_ANTENNA_OPT_TX2_INVERTED_WHEN_OFF)
+		temp |= MFRC522_BMS_TXCONTROL_INVTX2RFOFF_BIT;
+	else
+		temp &= ~(MFRC522_BMS_TXCONTROL_INVTX2RFOFF_BIT);
+
+	if (options & MFRC522_ANTENNA_OPT_TX1_INVERTED_WHEN_ON)
+		temp |= MFRC522_BMS_TXCONTROL_INVTX1RFON_BIT;
+	else
+		temp &= ~(MFRC522_BMS_TXCONTROL_INVTX1RFON_BIT);
+
+	if (options & MFRC522_ANTENNA_OPT_TX2_INVERTED_WHEN_ON)
+		temp |= MFRC522_BMS_TXCONTROL_INVTX2RFON_BIT;
+	else
+		temp &= ~(MFRC522_BMS_TXCONTROL_INVTX2RFON_BIT);
+
+	mfrc522_WriteAddress(Dev, MFRC522_ADDR_TXCONTROL, temp);
+}
+
+/*
+ * Sets if the parity bit for transmission and parity check for reception should be active or not.
+ */
+
+void mfrc522_EnableParity (mfrc522_Mod* Dev, bool status)
+{
+	uint8_t temp;
+
+	mfrc522_ReadAddress(Dev, MFRC522_ADDR_MFRX, &temp);
+	if (!(status))
+		temp |= MFRC522_BMS_MFRX_PARITYDISABLE_BIT;
+	else
+		temp &= ~(MFRC522_BMS_MFRX_PARITYDISABLE_BIT);
+	mfrc522_WriteAddress(Dev, MFRC522_ADDR_MFRX, temp);
 }
 
 /*
