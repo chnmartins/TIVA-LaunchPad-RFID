@@ -55,6 +55,15 @@ void mfrc522_SoftReset (mfrc522_Mod* Dev);
 mfrc522_result mfrc522_SelfTest (mfrc522_Mod* Dev);
 void mfrc522_IBWrite (mfrc522_Mod* Dev, uint8_t* buffer);
 void mfrc522_IBRead (mfrc522_Mod* Dev, uint8_t* buffer);
+void mfrc522_Initialization (mfrc522_Mod* Dev);
+
+void mfrc522_TimerConfigure (mfrc522_Mod* Dev, uint16_t options);
+void mfrc522_TimerSetParams (mfrc522_Mod* Dev, uint16_t prescaler, uint16_t reloadval);
+uint16_t mfrc522_TimerGetValue (mfrc522_Mod* Dev);
+bool mfrc522_TimerIsFinished (mfrc522_Mod* Dev);
+bool mfrc522_TimerIsRunning (mfrc522_Mod* Dev);
+void mfrc522_TimerStart (mfrc522_Mod* Dev);
+void mfrc522_TimerStop (mfrc522_Mod* Dev);
 
 #ifdef __cplusplus
 }

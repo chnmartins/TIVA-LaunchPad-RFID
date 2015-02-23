@@ -53,8 +53,19 @@ typedef enum
 
 // Register Addresses
 #define MFRC522_ADDR_COMMAND        (0x01)
+#define MFRC522_ADDR_COMIEN         (0x02)
+#define MFRC522_ADDR_COMIRQ         (0x04)
+#define MFRC522_ADDR_STATUS1        (0x07)
 #define MFRC522_ADDR_FIFODATA       (0x09)
 #define MFRC522_ADDR_FIFOLEVEL      (0x0A)
+#define MFRC522_ADDR_CONTROL        (0x0C)
+#define MFRC522_ADDR_DEMOD          (0x19)
+#define MFRC522_ADDR_TMODE          (0x2A)
+#define MFRC522_ADDR_TPRESCALERLO   (0x2B)
+#define MFRC522_ADDR_TRELOADHI      (0x2C)
+#define MFRC522_ADDR_TRELOADLO      (0x2D)
+#define MFRC522_ADDR_TCOUNTERVALHI  (0x2E)
+#define MFRC522_ADDR_TCOUNTERVALLO  (0x2F)
 #define MFRC522_ADDR_AUTOTEST       (0x36)
 
 // Bit masks
@@ -77,6 +88,54 @@ typedef enum
 
 #define MFRC522_BMS_AUTOTEST_SELFTEST_BITS                  BITS(0x0F, 0)
 #define MFRC522_BMS_AUTOTEST_SELFTEST_SELFTEST              BITS(0x09, 0)
+
+#define MFRC522_BMS_TMODE_TPRESCALERHI_BITS              BITS(0x0F, 0)
+#define MFRC522_BMS_TMODE_TPRESCALERHI(x)                BITS((x), 0)
+#define MFRC522_BMS_TMODE_TAUTORESTART_BIT               BIT(4)
+#define MFRC522_BMS_TMODE_TGATED_BITS                    BITS(0x03, 5)
+#define MFRC522_BMS_TMODE_TGATED_NONGATED                BITS(0x00, 5)
+#define MFRC522_BMS_TMODE_TGATED_MFIN                    BITS(0x01, 5)
+#define MFRC522_BMS_TMODE_TGATED_AUX1                    BITS(0x02, 5)
+#define MFRC522_BMS_TMODE_TAUTO_BIT                      BIT(7)
+
+#define MFRC522_BMS_DEMOD_TPRESCALEVEN_BIT               BIT(4)
+
+#define MFRC522_BMS_COMIEN_IRQINV_BIT                    BIT(7)
+#define MFRC522_BMS_COMIEN_TXIEN_BIT                     BIT(6)
+#define MFRC522_BMS_COMIEN_RXIEN_BIT                     BIT(5)
+#define MFRC522_BMS_COMIEN_IDLEIEN_BIT                   BIT(4)
+#define MFRC522_BMS_COMIEN_HIALERTIEN_BIT                BIT(3)
+#define MFRC522_BMS_COMIEN_LOALERTIEN_BIT                BIT(2)
+#define MFRC522_BMS_COMIEN_ERRIEN_BIT                    BIT(1)
+#define MFRC522_BMS_COMIEN_TIMERIEN_BIT                  BIT(0)
+
+#define MFRC522_BMS_COMIRQ_SET1_BIT                      BIT(7)
+#define MFRC522_BMS_COMIRQ_TXIRQ_BIT                      BIT(6)
+#define MFRC522_BMS_COMIRQ_RXIRQ_BIT                      BIT(5)
+#define MFRC522_BMS_COMIRQ_IDLEIRQ_BIT                      BIT(4)
+#define MFRC522_BMS_COMIRQ_HIALERTIRQ_BIT                      BIT(3)
+#define MFRC522_BMS_COMIRQ_LOALERTIRQ_BIT                      BIT(2)
+#define MFRC522_BMS_COMIRQ_ERRIRQ_BIT                      BIT(1)
+#define MFRC522_BMS_COMIRQ_TIMERIRQ_BIT                      BIT(0)
+
+#define MFRC522_BMS_CONTROL_TSTOPNOW_BIT                 BIT(7)
+#define MFRC522_BMS_CONTROL_TSTARTNOW_BIT                BIT(6)
+#define MFRC522_BMS_CONTROL_RXLASTBITS_BITS              BITS(0x07, 0)
+
+#define MFRC522_BMS_STATUS1_CRCOK_BIT                        BIT(6)
+#define MFRC522_BMS_STATUS1_CRCREADY_BIT                     BIT(5)
+#define MFRC522_BMS_STATUS1_IRQ_BIT                          BIT(4)
+#define MFRC522_BMS_STATUS1_TRUNNING_BIT                     BIT(3)
+#define MFRC522_BMS_STATUS1_HIALERT_BIT                      BIT(1)
+#define MFRC522_BMS_STATUS1_LOALERT_BIT                      BIT(0)
+
+// Other defines
+#define MFRC522_TIMER_OPT_AUTO                           (0x01)
+#define MFRC522_TIMER_OPT_GATED_MFIN                     (0x02)
+#define MFRC522_TIMER_OPT_GATED_AUX1                     (0x04)
+#define MFRC522_TIMER_OPT_AUTOLOAD                       (0x08)
+#define MFRC522_TIMER_OPT_EVENPRESCALER                  (0x10)
+#define MFRC522_TIMER_OPT_INT                            (0x20)
 
 /* Private macro -------------------------------------------------------------*/
 #define BIT(n)          (1 << (n))
@@ -108,6 +167,8 @@ mfrc522_result mfrc522_Init (mfrc522_Mod* Dev)
         mfrc522_HardReset(Dev);
 
     mfrc522_SelfTest(Dev);
+
+    mfrc522_Initialization(Dev);
 
     return res;
 }
@@ -312,6 +373,174 @@ mfrc522_result mfrc522_SelfTest (mfrc522_Mod* Dev)
     free(data);
 
     return cmd;
+}
+
+/*
+ * Performs the initialization part per the ISO normative for type A cards.
+ */
+
+void mfrc522_Initialization (mfrc522_Mod* Dev)
+{
+    mfrc522_SoftReset(Dev);
+}
+
+/*
+ * Configures the timer.
+ *
+ * Options is a 16 bit packed variable with the following format, from right to left:
+ *
+ * [0]: TMode TAuto bit.
+ * [1-2]: TMode TGated bits.
+ * [3]: TMode TAutoRestart.
+ * [4]: Demod TPrescalEven.
+ * [5]: ComIEnReg TimerIEn.
+ *
+ * Use MFRC522_TIMER_OPTx defines to define the options.
+ */
+
+void mfrc522_TimerConfigure (mfrc522_Mod* Dev, uint16_t options)
+{
+    uint8_t temp;
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_TMODE, &temp);
+
+    temp &= ~(MFRC522_BMS_TMODE_TAUTO_BIT);
+    if (options & MFRC522_TIMER_OPT_AUTO)
+        temp |= MFRC522_BMS_TMODE_TAUTO_BIT;
+
+    temp &= ~(MFRC522_BMS_TMODE_TGATED_BITS);
+    if (options & MFRC522_TIMER_OPT_GATED_AUX1)
+        temp |= MFRC522_BMS_TMODE_TGATED_AUX1;
+    else if (options & MFRC522_TIMER_OPT_GATED_MFIN)
+        temp |= MFRC522_BMS_TMODE_TGATED_MFIN;
+
+    temp &= ~(MFRC522_BMS_TMODE_TAUTORESTART_BIT);
+    if (options & MFRC522_TIMER_OPT_AUTOLOAD)
+        temp |= (MFRC522_BMS_TMODE_TAUTORESTART_BIT);
+
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_TMODE, temp);
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_DEMOD, &temp);
+
+    temp &= ~(MFRC522_BMS_DEMOD_TPRESCALEVEN_BIT);
+    if (options & MFRC522_TIMER_OPT_EVENPRESCALER)
+        temp |= MFRC522_BMS_DEMOD_TPRESCALEVEN_BIT;
+
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_DEMOD, temp);
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMIEN, &temp);
+
+    temp &= ~(MFRC522_BMS_COMIEN_TIMERIEN_BIT);
+    if (options & MFRC522_TIMER_OPT_EVENPRESCALER)
+        temp |= MFRC522_BMS_COMIEN_TIMERIEN_BIT;
+
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_COMIEN, temp);
+}
+
+/*
+ * Sets the prescaler and reload time on the timer.
+ *
+ * Prescaler: From 0 to 4095, inclusive.
+ * ReloadVal: From 0 to 65535, inclusive.
+ *
+ * Delay in seconds, without even prescaler: ((Prescaler * 2 + 1) * (ReloadVal + 1)) / (13560000)
+ * Delay in secods, with even prescaler: ((Prescaler * 2 + 2) * (ReloadVal + 1)) / (13560000)
+ */
+
+void mfrc522_TimerSetParams (mfrc522_Mod* Dev, uint16_t prescaler, uint16_t reloadval)
+{
+    uint8_t temp;
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_TMODE, &temp);
+
+    temp &= ~(MFRC522_BMS_TMODE_TPRESCALERHI_BITS);
+    temp |= MFRC522_BMS_TMODE_TPRESCALERHI((prescaler & 0x0F00) >> 8);
+
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_TMODE, temp);
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_TPRESCALERLO, prescaler & 0x00FF);
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_TRELOADHI, (reloadval & 0xFF00) >> 8);
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_TRELOADLO, reloadval & 0x00FF);
+}
+
+/*
+ * Gets the current value of the timer.
+ */
+
+uint16_t mfrc522_TimerGetValue (mfrc522_Mod* Dev)
+{
+    uint8_t Hi, Lo;
+    uint16_t Count;
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_TCOUNTERVALHI, &Hi);
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_TCOUNTERVALLO, &Lo);
+
+    Count = (Hi << 8) | Lo;
+
+    return Count;
+}
+
+/*
+ * Checks if the timer reached zero.
+ */
+
+bool mfrc522_TimerIsFinished (mfrc522_Mod* Dev)
+{
+    uint8_t temp;
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMIRQ, &temp);
+
+    if (temp & MFRC522_BMS_COMIRQ_TIMERIRQ_BIT)
+    {
+        // TODO: CLEAR THE INTERRUPT IF SET.
+        return true;
+    }
+
+    return false;
+}
+
+/*
+ * Checks if the timer is running
+ */
+
+bool mfrc522_TimerIsRunning (mfrc522_Mod* Dev)
+{
+    uint8_t temp;
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_STATUS1, &temp);
+
+    if (temp & MFRC522_BMS_STATUS1_TRUNNING_BIT)
+    {
+        return true;
+    }
+
+    return false;
+}
+
+
+/*
+ * Starts the timer immediately.
+ */
+
+void mfrc522_TimerStart (mfrc522_Mod* Dev)
+{
+    uint8_t temp;
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_CONTROL, &temp);
+    temp |= MFRC522_BMS_CONTROL_TSTARTNOW_BIT;
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_CONTROL, temp);
+}
+
+/*
+ * Stops the timer immediately.
+ */
+
+void mfrc522_TimerStop (mfrc522_Mod* Dev)
+{
+    uint8_t temp;
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_CONTROL, &temp);
+    temp |= MFRC522_BMS_CONTROL_TSTOPNOW_BIT;
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_CONTROL, temp);
 }
 
 /*
