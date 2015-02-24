@@ -62,6 +62,7 @@ bool brd_RfidInit (void);
 void brd_RfidWriteAddress (uint8_t address, uint8_t value);
 void brd_RfidReadAddress (uint8_t address, uint8_t* value);
 void brd_RfidRstControl (uint8_t status);
+void brd_RfidTest (void);
 
 #ifdef __cplusplus
 }

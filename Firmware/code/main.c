@@ -76,12 +76,12 @@ int main (void)
 
     brd_UartInit(DBGUART);
 
-    brd_RfidInit();
+    //brd_RfidInit();
 
 	while (1)
 	{
 	    brd_UartParse(DBGUART);
-	    brd_delay(1);
+	    brd_delay(2);
 	    brd_LedInteract(LEDR, LED_TOGGLE);
 	}
 }

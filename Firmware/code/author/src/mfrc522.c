@@ -57,7 +57,14 @@ typedef enum
 	Modem_ReceiverWaitingForRFField,
 	Modem_WaitForData,
 	Modem_Receiving,
+	Modem_Unknown,
 } mfrc522_Modem;
+
+typedef enum
+{
+    MFCommand_ReqA = 0x26,
+    MFCommand_WupA = 0x52,
+} mfrc522_MFCommand;
 
 /* Private define ------------------------------------------------------------*/
 #define MFRC522_GPIO_LOW      0x00
@@ -73,7 +80,10 @@ typedef enum
 // Register Addresses
 #define MFRC522_ADDR_COMMAND        (0x01)
 #define MFRC522_ADDR_COMIEN         (0x02)
+#define MFRC522_ADDR_DIVIEN         (0x03)
 #define MFRC522_ADDR_COMIRQ         (0x04)
+#define MFRC522_ADDR_DIVIRQ         (0x05)
+#define MFRC522_ADDR_ERROR          (0x06)
 #define MFRC522_ADDR_STATUS1        (0x07)
 #define MFRC522_ADDR_STATUS2		(0x08)
 #define MFRC522_ADDR_FIFODATA       (0x09)
@@ -144,9 +154,25 @@ typedef enum
 #define MFRC522_BMS_COMIRQ_ERRIRQ_BIT                      BIT(1)
 #define MFRC522_BMS_COMIRQ_TIMERIRQ_BIT                      BIT(0)
 
+#define MFRC522_BMS_DIVIRQ_SET2_BIT                     BIT(7)
+#define MFRC522_BMS_DIVIRQ_MFINACTIRQ_BIT               BIT(4)
+#define MFRC522_BMS_DIVIRQ_CRCIRQ_BIT                   BIT(2)
+
+#define MFRC522_BMS_DIVIEN_IRQPUSHPULL_BIT              BIT(7)
+#define MFRC522_BMS_DIVIEN_MFINACTIEN_BIT               BIT(4)
+#define MFRC522_BMS_DIVIEN_CRCIEN_BIT                   BIT(2)
+
 #define MFRC522_BMS_CONTROL_TSTOPNOW_BIT                 BIT(7)
 #define MFRC522_BMS_CONTROL_TSTARTNOW_BIT                BIT(6)
 #define MFRC522_BMS_CONTROL_RXLASTBITS_BITS              BITS(0x07, 0)
+
+#define MFRC522_BMS_ERROR_WRERR_BIT         BIT(7)
+#define MFRC522_BMS_ERROR_TEMPERR_BIT       BIT(6)
+#define MFRC522_BMS_ERROR_BUFFEROVFL_BIT    BIT(4)
+#define MFRC522_BMS_ERROR_COLLERR_BIT       BIT(3)
+#define MFRC522_BMS_ERROR_CRCERR_BIT        BIT(2)
+#define MFRC522_BMS_ERROR_PARITYERR_BIT     BIT(1)
+#define MFRC522_BMS_ERROR_PROTOCOLERR_BIT   BIT(0)
 
 #define MFRC522_BMS_STATUS1_CRCOK_BIT                        BIT(6)
 #define MFRC522_BMS_STATUS1_CRCREADY_BIT                     BIT(5)
@@ -208,6 +234,25 @@ typedef enum
 #define MFRC522_ANTENNA_OPT_TX1_INVERTED_WHEN_ON		 (0x20)
 #define MFRC522_ANTENNA_OPT_TX2_INVERTED_WHEN_ON		 (0x40)
 
+#define MFRC522_INT_TX                  (0x001)
+#define MFRC522_INT_RX                  (0x002)
+#define MFRC522_INT_IDLE                (0x004)
+#define MFRC522_INT_HIALERT             (0x008)
+#define MFRC522_INT_LOALERT             (0x010)
+#define MFRC522_INT_ERR                 (0x020)
+#define MFRC522_INT_TIMER               (0x040)
+#define MFRC522_INT_MFINACT             (0x080)
+#define MFRC522_INT_CRC                 (0x100)
+#define MFRC522_INT_ALLINTS             (0x1FF)
+
+#define MFRC522_ERROR_FIFOWRITE         (0x01)
+#define MFRC522_ERROR_OVERHEAT       (0x02)
+#define MFRC522_ERROR_BUFFEROVERFLOW    (0x04)
+#define MFRC522_ERROR_COLLISION         (0x08)
+#define MFRC522_ERROR_CRC               (0x10)
+#define MFRC522_ERROR_PARITY            (0x20)
+#define MFRC522_ERROR_PROTOCOL          (0x40)
+
 /* Private macro -------------------------------------------------------------*/
 #define BIT(n)          (1 << (n))
 #define BITS(x, n)      ((x) << (n))
@@ -240,10 +285,8 @@ mfrc522_result mfrc522_Init (mfrc522_Mod* Dev)
 
     if (Dev->HwInit() == false)
         res = mfrc522_error;
-    else
-        mfrc522_HardReset(Dev);
 
-    mfrc522_SelfTest(Dev);
+    mfrc522_HardReset(Dev);
 
     mfrc522_Initialization(Dev);
 
@@ -458,22 +501,53 @@ mfrc522_result mfrc522_SelfTest (mfrc522_Mod* Dev)
 
 void mfrc522_Initialization (mfrc522_Mod* Dev)
 {
-    mfrc522_SoftReset(Dev);
+    uint8_t data[64] = {0x00};
+    uint16_t INT = 0;
+    uint8_t ERR = 0;
+    uint16_t i = 0;
 
-    // Set the timer managed by the protocol, 15 ms time.
     mfrc522_TimerConfigure(Dev, MFRC522_TIMER_OPT_AUTO);
-    mfrc522_TimerSetParams(Dev, 3390, 30);
+    mfrc522_TimerSetParams(Dev, 169, 1000);
 
-    // Force 100 ASK modulation on PCD to PICC.
     mfrc522_TransmitterForce100ASK(Dev, true);
-
-    // Turn on the Antenna.
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_MODE, 0x3D); // CRC
     mfrc522_AntennaSettings(Dev, MFRC522_ANTENNA_OPT_TX2_INVERTED_WHEN_ON | MFRC522_ANTENNA_OPT_TX1_MODULATED | MFRC522_ANTENNA_OPT_TX2_MODULATED);
+    //mfrc522_ReceiverEnable(Dev, false);
 
-    // Configure transmitter for short frames.
-    mfrc522_EnableParity(Dev, false);
-    mfrc522_TransmitterSetBits(Dev, 7);
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_BITFRAMING, ((0 << 4) | 7));
+    mfrc522_IRQClear(Dev, MFRC522_INT_ALLINTS);
+    mfrc522_FIFOClear(Dev);
 
+    data[0] = MFCommand_ReqA;
+    mfrc522_FIFOWrite(Dev, data, 1);
+
+    mfrc522_CommandExecute(Dev, Transceive);
+    mfrc522_TransmitterStart(Dev);
+
+    do
+    {
+        i++;
+        INT = mfrc522_IRQGet(Dev) & (MFRC522_INT_ERR | MFRC522_INT_RX | MFRC522_INT_TIMER);
+    } while (!(INT));
+
+    ERR = mfrc522_GetErrors(Dev);
+
+    mfrc522_FIFORead(Dev, data, 64);
+
+}
+
+/*
+ * Deactivates or activates the analog part of the receiver.
+ */
+
+void mfrc522_ReceiverEnable (mfrc522_Mod* Dev, bool status)
+{
+    uint8_t temp;
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMMAND, &temp);
+    temp |= MFRC522_BMS_COMMAND_COMMAND_NOCMDCHANGE; // Add CMD NO CHANGE.
+    (status) ? (temp &= ~(MFRC522_BMS_COMMAND_RCVOFF_BIT)) : (temp |= MFRC522_BMS_COMMAND_RCVOFF_BIT);
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_COMMAND, temp);
 }
 
 /*
@@ -487,7 +561,7 @@ mfrc522_Modem mfrc522_ModemGetStatus (mfrc522_Mod* Dev)
 
 	mfrc522_ReadAddress(Dev, MFRC522_ADDR_STATUS2, &temp);
 
-	temp &= ~(MFRC522_BMS_STATUS2_MODEMSTATE_BITS);
+	temp &= MFRC522_BMS_STATUS2_MODEMSTATE_BITS;
 
 	switch (temp)
 	{
@@ -513,6 +587,7 @@ mfrc522_Modem mfrc522_ModemGetStatus (mfrc522_Mod* Dev)
 		status = Modem_WaitForStartSend;
 		break;
 	default:
+	    status = Modem_Unknown;
 		break;
 	}
 
@@ -520,34 +595,137 @@ mfrc522_Modem mfrc522_ModemGetStatus (mfrc522_Mod* Dev)
 }
 
 /*
- * Enables or disables the transmitter interrupt on the Chip.
+ * Enables or disables the specified interrupts.
+ *
+ * MFRC522_INTx is the logical OR of the MFRC522_INTx defines.
+ *
+ * status = true enables the interrupts, status = false disables the interrupts.
  */
 
-void mfrc522_TransmitterIntEnable (mfrc522_Mod* Dev, bool status)
+void mfrc522_IRQEnable (mfrc522_Mod* Dev, uint16_t MFRC522_INTx, bool status)
 {
-	uint8_t temp;
+    uint8_t temp;
 
-	mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMIEN, &temp);
-	if (status)
-		temp |= MFRC522_BMS_COMIEN_TXIEN_BIT;
-	else
-		temp &= ~MFRC522_BMS_COMIEN_TXIEN_BIT;
-	mfrc522_WriteAddress(Dev, MFRC522_ADDR_COMIEN, temp);
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMIEN, &temp);
+    if (MFRC522_INTx & MFRC522_INT_TX)
+        (status) ? (temp |= MFRC522_BMS_COMIEN_TXIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_TXIEN_BIT);
+    if (MFRC522_INTx & MFRC522_INT_TIMER)
+        (status) ? (temp |= MFRC522_BMS_COMIEN_TIMERIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_TIMERIEN_BIT);
+    if (MFRC522_INTx & MFRC522_INT_RX)
+        (status) ? (temp |= MFRC522_BMS_COMIEN_RXIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_RXIEN_BIT);
+    if (MFRC522_INTx & MFRC522_INT_LOALERT)
+        (status) ? (temp |= MFRC522_BMS_COMIEN_LOALERTIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_LOALERTIEN_BIT);
+    if (MFRC522_INTx & MFRC522_INT_HIALERT)
+        (status) ? (temp |= MFRC522_BMS_COMIEN_HIALERTIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_HIALERTIEN_BIT);
+    if (MFRC522_INTx & MFRC522_INT_IDLE)
+        (status) ? (temp |= MFRC522_BMS_COMIEN_IDLEIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_IDLEIEN_BIT);
+    if (MFRC522_INTx & MFRC522_INT_ERR)
+        (status) ? (temp |= MFRC522_BMS_COMIEN_ERRIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_ERRIEN_BIT);
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_COMIEN, temp);
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_DIVIEN, &temp);
+    if (MFRC522_INTx & MFRC522_INT_MFINACT)
+        (status) ? (temp |= MFRC522_BMS_DIVIEN_MFINACTIEN_BIT) : (temp &= ~MFRC522_BMS_DIVIEN_MFINACTIEN_BIT);
+    if (MFRC522_INTx & MFRC522_INT_CRC)
+        (status) ? (temp |= MFRC522_BMS_DIVIEN_CRCIEN_BIT) : (temp &= ~MFRC522_BMS_DIVIEN_CRCIEN_BIT);
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_DIVIEN, temp);
 }
 
 /*
- * Checks if the last bit of the transmitted data was sent out.
+ * Returns the status of all the interrupts.
  */
 
-bool mfrc522_TransmitterIsFinished (mfrc522_Mod* Dev)
+uint16_t mfrc522_IRQGet (mfrc522_Mod* Dev)
 {
-	uint8_t temp;
+    uint8_t temp;
+    uint16_t res = 0;
 
-	mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMIRQ, &temp);
-	if (temp & MFRC522_BMS_COMIRQ_TXIRQ_BIT)
-		return true;
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMIRQ, &temp);
+    if (temp & MFRC522_BMS_COMIRQ_TXIRQ_BIT)
+        res |= MFRC522_INT_TX;
+    if (temp & MFRC522_BMS_COMIRQ_TIMERIRQ_BIT)
+        res |= MFRC522_INT_TIMER;
+    if (temp & MFRC522_BMS_COMIRQ_RXIRQ_BIT)
+        res |= MFRC522_INT_RX;
+    if (temp & MFRC522_BMS_COMIRQ_LOALERTIRQ_BIT)
+        res |= MFRC522_INT_LOALERT;
+    if (temp & MFRC522_BMS_COMIRQ_HIALERTIRQ_BIT)
+        res |= MFRC522_INT_HIALERT;
+    if (temp & MFRC522_BMS_COMIRQ_IDLEIRQ_BIT)
+        res |= MFRC522_INT_IDLE;
+    if (temp & MFRC522_BMS_COMIRQ_ERRIRQ_BIT)
+        res |= MFRC522_INT_ERR;
 
-	return false;
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_DIVIRQ, &temp);
+    if (temp & MFRC522_BMS_DIVIRQ_MFINACTIRQ_BIT)
+        res |= MFRC522_INT_MFINACT;
+    if (temp & MFRC522_BMS_DIVIRQ_CRCIRQ_BIT)
+        res |= MFRC522_INT_CRC;
+
+    return res;
+}
+
+/*
+ * Clears the specified interrupts.
+ */
+
+void mfrc522_IRQClear (mfrc522_Mod* Dev, uint16_t MFRC522_INTx)
+{
+    uint8_t temp;
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMIRQ, &temp);
+    temp &= ~MFRC522_BMS_COMIRQ_SET1_BIT;
+    if (!(MFRC522_INTx & MFRC522_INT_TX))
+        temp &= ~(MFRC522_BMS_COMIRQ_TXIRQ_BIT);
+    if (!(MFRC522_INTx & MFRC522_INT_TIMER))
+        temp &= ~(MFRC522_BMS_COMIRQ_TIMERIRQ_BIT);
+    if (!(MFRC522_INTx & MFRC522_INT_RX))
+        temp &= ~(MFRC522_BMS_COMIRQ_RXIRQ_BIT);
+    if (!(MFRC522_INTx & MFRC522_INT_LOALERT))
+        temp &= ~(MFRC522_BMS_COMIRQ_LOALERTIRQ_BIT);
+    if (!(MFRC522_INTx & MFRC522_INT_HIALERT))
+        temp &= ~(MFRC522_BMS_COMIRQ_HIALERTIRQ_BIT);
+    if (!(MFRC522_INTx & MFRC522_INT_IDLE))
+        temp &= ~(MFRC522_BMS_COMIRQ_IDLEIRQ_BIT);
+    if (!(MFRC522_INTx & MFRC522_INT_ERR))
+        temp &= ~(MFRC522_BMS_COMIRQ_ERRIRQ_BIT);
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_COMIRQ, temp);
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_DIVIRQ, &temp);
+    temp &= ~MFRC522_BMS_DIVIRQ_SET2_BIT;
+    if (!(MFRC522_INTx & MFRC522_INT_MFINACT))
+        temp &= ~(MFRC522_BMS_DIVIRQ_MFINACTIRQ_BIT);
+    if (!(MFRC522_INTx & MFRC522_INT_CRC))
+        temp &= ~(MFRC522_BMS_DIVIRQ_CRCIRQ_BIT);
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_DIVIRQ, temp);
+}
+
+/*
+ * Gets the errors indicated by the device.
+ */
+
+uint8_t mfrc522_GetErrors (mfrc522_Mod* Dev)
+{
+    uint8_t temp;
+    uint8_t result = 0;
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_ERROR, &temp);
+    if (temp & MFRC522_BMS_ERROR_WRERR_BIT)
+        result |= MFRC522_ERROR_FIFOWRITE;
+    if (temp & MFRC522_BMS_ERROR_TEMPERR_BIT)
+        result |= MFRC522_ERROR_OVERHEAT;
+    if (temp & MFRC522_BMS_ERROR_PROTOCOLERR_BIT)
+        result |= MFRC522_ERROR_PROTOCOL;
+    if (temp & MFRC522_BMS_ERROR_PARITYERR_BIT)
+        result |= MFRC522_ERROR_PARITY;
+    if (temp & MFRC522_BMS_ERROR_CRCERR_BIT)
+        result |= MFRC522_ERROR_CRC;
+    if (temp & MFRC522_BMS_ERROR_COLLERR_BIT)
+        result |= MFRC522_ERROR_COLLISION;
+    if (temp & MFRC522_BMS_ERROR_BUFFEROVFL_BIT)
+        result |= MFRC522_ERROR_BUFFEROVERFLOW;
+
+    return result;
 }
 
 /*
@@ -674,6 +852,19 @@ void mfrc522_TransmitterForce100ASK (mfrc522_Mod* Dev, bool status)
 	else
 		temp &= ~(MFRC522_BMS_TXASK_FORCE100ASK_BIT);
 	mfrc522_WriteAddress(Dev, MFRC522_ADDR_TXMODE, temp);
+}
+
+/*
+ * Starts the transmission of data. Only in combination with transceive command.
+ */
+
+void mfrc522_TransmitterStart (mfrc522_Mod* Dev)
+{
+    uint8_t temp;
+
+    mfrc522_ReadAddress(Dev, MFRC522_ADDR_BITFRAMING, &temp);
+    temp |= MFRC522_BMS_BITFRAMING_STARTSEND_BIT;
+    mfrc522_WriteAddress(Dev, MFRC522_ADDR_BITFRAMING, temp);
 }
 
 /*
@@ -885,7 +1076,6 @@ bool mfrc522_TimerIsRunning (mfrc522_Mod* Dev)
     return false;
 }
 
-
 /*
  * Starts the timer immediately.
  */
@@ -947,7 +1137,7 @@ void mfrc522_FIFOWrite (mfrc522_Mod* Dev, uint8_t* buffer, uint8_t bytestowrite)
 
     FifoLevel = mfrc522_FIFOGetLevel(Dev);
 
-    while (FifoLevel < 64 && (i < bytestowrite))
+    while ((FifoLevel < 64) && (i < bytestowrite))
     {
         mfrc522_WriteAddress(Dev, MFRC522_ADDR_FIFODATA, *(buffer + i));
         while (FifoLevel == mfrc522_FIFOGetLevel(Dev));
@@ -994,8 +1184,10 @@ uint8_t mfrc522_FIFOGetLevel (mfrc522_Mod* Dev)
 
 void mfrc522_FIFORead (mfrc522_Mod* Dev, uint8_t* buffer, uint8_t bytestoread)
 {
-    uint8_t FifoLevel = mfrc522_FIFOGetLevel(Dev);
+    uint8_t FifoLevel = 0;
     uint8_t i = 0;
+
+    FifoLevel = mfrc522_FIFOGetLevel(Dev);
 
     while (FifoLevel > 0 && (i < bytestoread))
     {

@@ -560,3 +560,8 @@ bool brd_RfidInit (void)
 
     return true;
 }
+
+void brd_RfidTest (void)
+{
+    mfrc522_Initialization(RfidDev);
+}

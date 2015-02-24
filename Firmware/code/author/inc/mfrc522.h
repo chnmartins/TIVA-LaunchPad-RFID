@@ -65,15 +65,21 @@ bool mfrc522_TimerIsRunning (mfrc522_Mod* Dev);
 void mfrc522_TimerStart (mfrc522_Mod* Dev);
 void mfrc522_TimerStop (mfrc522_Mod* Dev);
 
-void mfrc522_TransmitterIntEnable (mfrc522_Mod* Dev, bool status);
-bool mfrc522_TransmitterIsFinished (mfrc522_Mod* Dev);
 void mfrc522_TransmitterSetBits (mfrc522_Mod* Dev, uint8_t nBits);
 void mfrc522_TransmitterWaitsRF (mfrc522_Mod* Dev, bool status);
 void mfrc522_TransmitterEnableCRC (mfrc522_Mod* Dev, bool status);
 void mfrc522_TransmitterForce100ASK (mfrc522_Mod* Dev, bool status);
+void mfrc522_TransmitterStart (mfrc522_Mod* Dev);
 
 void mfrc522_AntennaSettings (mfrc522_Mod* Dev, uint8_t options);
 void mfrc522_EnableParity (mfrc522_Mod* Dev, bool status);
+uint8_t mfrc522_GetErrors (mfrc522_Mod* Dev);
+
+void mfrc522_IRQEnable (mfrc522_Mod* Dev, uint16_t MFRC522_INTx, bool status);
+uint16_t mfrc522_IRQGet (mfrc522_Mod* Dev);
+void mfrc522_IRQClear (mfrc522_Mod* Dev, uint16_t MFRC522_INTx);
+
+void mfrc522_ReceiverEnable (mfrc522_Mod* Dev, bool status);
 
 #ifdef __cplusplus
 }
