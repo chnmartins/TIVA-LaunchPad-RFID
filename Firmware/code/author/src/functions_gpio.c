@@ -21,6 +21,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <stddef.h>
 
 #include "functions_gpio.h"
 #include "conf.h"
@@ -33,135 +35,189 @@
 /* Private typedef -----------------------------------------------------------*/
 
 /* Private define ------------------------------------------------------------*/
-#define	GPIO_UNLOCK_VALUE	(0x4C4F434B)
+#define	FGPIO_GPIO_UNLOCK_VALUE	            (0x4C4F434B)
 
 /* Private macro -------------------------------------------------------------*/
-#define	ASSERT_PORT(x)	            ((x) == PORT_A || \
-									 (x) == PORT_B || \
-									 (x) == PORT_C || \
-									 (x) == PORT_D || \
-									 (x) == PORT_E || \
-									 (x) == PORT_F || \
-									 (x) == PORT_G || \
-									 (x) == PORT_H || \
-									 (x) == PORT_J || \
-									 (x) == PORT_K || \
-									 (x) == PORT_L || \
-									 (x) == PORT_M || \
-									 (x) == PORT_N || \
-									 (x) == PORT_P || \
-									 (x) == PORT_Q || \
-									 (x) == PORT_R || \
-									 (x) == PORT_S || \
-									 (x) == PORT_T)
+#define	FGPIO_ASSERT_PORT(x)	            ((x) == FGPIO_PORT_A || \
+									         (x) == FGPIO_PORT_B || \
+									         (x) == FGPIO_PORT_C || \
+									         (x) == FGPIO_PORT_D || \
+									         (x) == FGPIO_PORT_E || \
+									         (x) == FGPIO_PORT_F || \
+									         (x) == FGPIO_PORT_G || \
+									         (x) == FGPIO_PORT_H || \
+									         (x) == FGPIO_PORT_J || \
+									         (x) == FGPIO_PORT_K || \
+									         (x) == FGPIO_PORT_L || \
+									         (x) == FGPIO_PORT_M || \
+									         (x) == FGPIO_PORT_N || \
+									         (x) == FGPIO_PORT_P || \
+									         (x) == FGPIO_PORT_Q || \
+									         (x) == FGPIO_PORT_R || \
+									         (x) == FGPIO_PORT_S || \
+									         (x) == FGPIO_PORT_T)
 
-#define	ASSERT_PIN(x)			    ((x) == PIN_0 || \
-									 (x) == PIN_1 || \
-									 (x) == PIN_2 || \
-									 (x) == PIN_3 || \
-									 (x) == PIN_4 || \
-									 (x) == PIN_5 || \
-									 (x) == PIN_6 || \
-									 (x) == PIN_7)
+#define	FGPIO_ASSERT_PIN(x)			        ((x) == FGPIO_PIN_0 || \
+									         (x) == FGPIO_PIN_1 || \
+									         (x) == FGPIO_PIN_2 || \
+									         (x) == FGPIO_PIN_3 || \
+									         (x) == FGPIO_PIN_4 || \
+									         (x) == FGPIO_PIN_5 || \
+									         (x) == FGPIO_PIN_6 || \
+									         (x) == FGPIO_PIN_7)
 
-#define ASSERT_DIRECTION(x)         ((x) == DIR_IN || \
-                                     (x) == DIR_OUT || \
-                                     (x) == DIR_HW)
+#define FGPIO_ASSERT_DIRECTION(x)           ((x) == FGPIO_DIR_IN    || \
+                                             (x) == FGPIO_DIR_OUT   || \
+                                             (x) == FGPIO_DIR_HW)
 
-#define ASSERT_CURRENT(x)           ((x) == CURR_2MA || \
-                                     (x) == CURR_4MA || \
-                                     (x) == CURR_6MA || \
-                                     (x) == CURR_8MA || \
-                                     (x) == CURR_8MA_SC || \
-                                     (x) == CURR_10MA || \
-                                     (x) == CURR_12MA)
+#define FGPIO_ASSERT_CURRENT(x)             ((x) == FGPIO_CURRENT_2MA      || \
+                                             (x) == FGPIO_CURRENT_4MA      || \
+                                             (x) == FGPIO_CURRENT_6MA      || \
+                                             (x) == FGPIO_CURRENT_8MA      || \
+                                             (x) == FGPIO_CURRENT_8MA_SC   || \
+                                             (x) == FGPIO_CURRENT_10MA     || \
+                                             (x) == FGPIO_CURRENT_12MA)
 
-#define	ASSERT_TYPE(x)			    ((x) == TYPE_PP || \
-									 (x) == TYPE_PP_PU || \
-									 (x) == TYPE_PP_PD || \
-									 (x) == TYPE_OD || \
-									 (x) == TYPE_ANALOG || \
-									 (x) == TYPE_WAKE_HIGH || \
-									 (x) == TYPE_WAKE_LOW)
+#define	FGPIO_ASSERT_TYPE(x)			    ((x) == FGPIO_TYPE_PUSH_PULL            || \
+									         (x) == FGPIO_TYPE_PUSH_PULL_PULLUP     || \
+									         (x) == FGPIO_TYPE_PUSH_PULL_PULLDOWN   || \
+									         (x) == FGPIO_TYPE_OPEN_DRAIN           || \
+									         (x) == FGPIO_TYPE_ANALOG               || \
+									         (x) == FGPIO_TYPE_WAKE_HIGH            || \
+									         (x) == FGPIO_TYPE_WAKE_LOW)
 
-#define ASSERT_INTTYPE(x)           ((x) == INTTYPE_FALLING_EDGE || \
-                                     (x) == INTTYPE_RISING_EDGE || \
-                                     (x) == INTTYPE_BOTH_EDGES || \
-                                     (x) == INTTYPE_LOW_LEVEL || \
-                                     (x) == INTTYPE_HIGH_LEVEL || \
-                                     (x) == INTTYPE_DISCRETE_INT)
+#define FGPIO_ASSERT_INTTYPE(x)             ((x) == FGPIO_INTTYPE_FALLING_EDGE  || \
+                                             (x) == FGPIO_INTTYPE_RISING_EDGE   || \
+                                             (x) == FGPIO_INTTYPE_BOTH_EDGES    || \
+                                             (x) == FGPIO_INTTYPE_LOW_LEVEL     || \
+                                             (x) == FGPIO_INTTYPE_HIGH_LEVEL    || \
+                                             (x) == FGPIO_INTTYPE_DISCRETE_INT)
+
+#define FGPIO_ASSERT_OUTPUT(x)              ((x) == FGPIO_OUTPUT_LOW    || \
+                                             (x) == FGPIO_OUTPUT_HIGH   || \
+                                             (x) == FGPIO_OUTPUT_TOGGLE)
+
+#define FGPIO_ASSERT_INT(x)                 ((x) == FGPIO_INT_ON    || \
+                                             (x) == FGPIO_INT_OFF)
 
 /* Private variables ---------------------------------------------------------*/
 
 /* Private function prototypes -----------------------------------------------*/
 
+static void fGpio_InitInput (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_TYPEx, uint32_t FGPIO_CURRENTx);
+static void fGpio_InitInputInt (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_TYPEx, uint32_t FGPIO_CURRENTx, uint32_t FGPIO_INTTYPEx, void (*FGPIO_INTIRQ) (void));
+static void fGpio_InitOutput(uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_TYPEx, uint32_t FGPIO_CURRENTx);
+static void fGpio_InitAlternateFunction(uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_TYPEx, uint32_t FGPIO_CURRENTx, uint32_t GPIO_AF);
+
+static uint32_t fGpio_IntGetPin (uint32_t FGPIO_PINx);
+static void fGpio_IntConfig (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_INTTYPEx, void (*FGPIO_INTIRQ) (void));
+static void fGpio_IntStatus (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint8_t FGPIO_INTx);
+static uint8_t fGpio_IntTest (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx);
+static void fGpio_IntClear (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx);
+static void fGpio_IntStatus (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint8_t FGPIO_INTx);
+
+static void fGpio_UnlockPin (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx);
+static void fGpio_Config (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_CURRENTx, uint32_t FGPIO_TYPEx, uint32_t GPIO_DIR_MODEx);
+static void fGpio_SysCtlStatus (uint32_t FGPIO_PORTx, bool status);
+
+static void fGpio_OutputInteract (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint8_t FGPIO_OUTPUTx);
+static uint8_t fGpio_InputRead(uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx);
+
 /* Private functions ---------------------------------------------------------*/
+
+/*
+ *
+ */
+
+fGpio_Class* fGpio_CreateClass (void)
+{
+    fGpio_Class* temp = malloc(sizeof(fGpio_Class));
+    if (temp == NULL)
+        return NULL;
+
+    temp->InitAlternateFunction = fGpio_InitAlternateFunction;
+    temp->InitInput = fGpio_InitInput;
+    temp->InitInputInt = fGpio_InitInputInt;
+    temp->InitOutput = fGpio_InitOutput;
+
+    return temp;
+}
+
+/*
+ *
+ */
+
+void fGpio_DestroyClass (fGpio_Class* class)
+{
+    free(class);
+}
 
 /*
  * Function that enables the SysCtl memory mapped register for the port specified.
  */
 
-void fGpio_enableSysCtl (fGpio_Pin* const Gpio_Pin)
+static void fGpio_SysCtlStatus (uint32_t FGPIO_PORTx, bool status)
 {
 #ifdef	DEBUG
-	ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
+	ASSERT_PARAM(FGPIO_ASSERT_PORT(FGPIO_PORTx));
+	// TRACE FLOW
 #endif
 
-	switch (Gpio_Pin->Port)
+	switch (FGPIO_PORTx)
 	{
-	case GPIO_PORTA_BASE:
-		SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+	case FGPIO_PORT_A:
+		(status) ? SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA) : SysCtlPeripheralDisable(SYSCTL_PERIPH_GPIOA);
 		break;
-	case GPIO_PORTB_BASE:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
+	case FGPIO_PORT_B:
+        (status) ? SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB) : SysCtlPeripheralDisable(SYSCTL_PERIPH_GPIOB);
         break;
-	case GPIO_PORTC_BASE:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOC);
+	case FGPIO_PORT_C:
+        (status) ? SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOC) : SysCtlPeripheralDisable(SYSCTL_PERIPH_GPIOC);
         break;
-	case GPIO_PORTD_BASE:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
+	case FGPIO_PORT_D:
+        (status) ? SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD) : SysCtlPeripheralDisable(SYSCTL_PERIPH_GPIOD);
         break;
-	case GPIO_PORTE_BASE:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
+	case FGPIO_PORT_E:
+        (status) ? SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE) : SysCtlPeripheralDisable(SYSCTL_PERIPH_GPIOE);
         break;
-	case GPIO_PORTF_BASE:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
+	case FGPIO_PORT_F:
+        (status) ? SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF) : SysCtlPeripheralDisable(SYSCTL_PERIPH_GPIOF);
         break;
-	case GPIO_PORTG_BASE:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOG);
+	case FGPIO_PORT_G:
+        (status) ? SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOG) : SysCtlPeripheralDisable(SYSCTL_PERIPH_GPIOG);
         break;
-	case GPIO_PORTH_BASE:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOH);
+	case FGPIO_PORT_H:
+        (status) ? SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOH) : SysCtlPeripheralDisable(SYSCTL_PERIPH_GPIOH);
         break;
-	case GPIO_PORTJ_BASE:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOJ);
+	case FGPIO_PORT_J:
+        (status) ? SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOJ) : SysCtlPeripheralDisable(SYSCTL_PERIPH_GPIOJ);
         break;
-	case GPIO_PORTK_BASE:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOK);
+	case FGPIO_PORT_K:
+        (status) ? SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOK) : SysCtlPeripheralDisable(SYSCTL_PERIPH_GPIOK);
         break;
-	case GPIO_PORTL_BASE:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOL);
+	case FGPIO_PORT_L:
+        (status) ? SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOL) : SysCtlPeripheralDisable(SYSCTL_PERIPH_GPIOL);
         break;
-	case GPIO_PORTM_BASE:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOM);
+	case FGPIO_PORT_M:
+        (status) ? SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOM) : SysCtlPeripheralDisable(SYSCTL_PERIPH_GPIOM);
         break;
-	case GPIO_PORTN_BASE:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
+	case FGPIO_PORT_N:
+        (status) ? SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION) : SysCtlPeripheralDisable(SYSCTL_PERIPH_GPION);
         break;
-	case GPIO_PORTP_BASE:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOP);
+	case FGPIO_PORT_P:
+        (status) ? SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOP) : SysCtlPeripheralDisable(SYSCTL_PERIPH_GPIOP);
         break;
-	case GPIO_PORTQ_BASE:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOQ);
+	case FGPIO_PORT_Q:
+        (status) ? SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOQ) : SysCtlPeripheralDisable(SYSCTL_PERIPH_GPIOQ);
         break;
-	case GPIO_PORTR_BASE:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOR);
+	case FGPIO_PORT_R:
+        (status) ? SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOR) : SysCtlPeripheralDisable(SYSCTL_PERIPH_GPIOR);
         break;
-	case GPIO_PORTS_BASE:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOS);
+	case FGPIO_PORT_S:
+        (status) ? SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOS) : SysCtlPeripheralDisable(SYSCTL_PERIPH_GPIOS);
         break;
-	case GPIO_PORTT_BASE:
-        SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOT);
+	case FGPIO_PORT_T:
+        (status) ? SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOT) : SysCtlPeripheralDisable(SYSCTL_PERIPH_GPIOT);
         break;
 	default:
         break;
@@ -172,32 +228,33 @@ void fGpio_enableSysCtl (fGpio_Pin* const Gpio_Pin)
  * Function that returns the GPIO interrupt pin for the pin specified.
  */
 
-uint32_t fGpio_getIntPin (fGpio_Pin* const Gpio_Pin)
+static uint32_t fGpio_IntGetPin (uint32_t FGPIO_PINx)
 {
 #ifdef	DEBUG
-	ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
+	ASSERT_PARAM(FGPIO_ASSERT_PIN(FGPIO_PINx));
+	// TRACE FLOW
 #endif
 
-	switch (Gpio_Pin->Pin)
+	switch (FGPIO_PINx)
 	{
-	case GPIO_PIN_0:
+	case FGPIO_PIN_0:
 		return GPIO_INT_PIN_0;
-	case GPIO_PIN_1:
+	case FGPIO_PIN_1:
 		return GPIO_INT_PIN_1;
-	case GPIO_PIN_2:
+	case FGPIO_PIN_2:
 		return GPIO_INT_PIN_2;
-	case GPIO_PIN_3:
+	case FGPIO_PIN_3:
 		return GPIO_INT_PIN_3;
-	case GPIO_PIN_4:
+	case FGPIO_PIN_4:
 		return GPIO_INT_PIN_4;
-	case GPIO_PIN_5:
+	case FGPIO_PIN_5:
 		return GPIO_INT_PIN_5;
-	case GPIO_PIN_6:
+	case FGPIO_PIN_6:
 		return GPIO_INT_PIN_6;
-	case GPIO_PIN_7:
+	case FGPIO_PIN_7:
 		return GPIO_INT_PIN_7;
 	default:
-		return (uint32_t) 0;
+	    return 0;
 	}
 }
 
@@ -205,185 +262,219 @@ uint32_t fGpio_getIntPin (fGpio_Pin* const Gpio_Pin)
  * Function to unlock the specified GPIO pin on the specified port.
  */
 
-void fGpio_unlockPin (fGpio_Pin* const Gpio_Pin)
+static void fGpio_UnlockPin (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx)
 {
 #ifdef	DEBUG
-	ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
-	ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
+    ASSERT_PARAM(FGPIO_ASSERT_PIN(FGPIO_PINx));
+	ASSERT_PARAM(FGPIO_ASSERT_PORT(FGPIO_PORTx));
+	// Trace flow
 #endif
 
-	HWREG(Gpio_Pin->Port + GPIO_O_LOCK) = GPIO_UNLOCK_VALUE;
-	HWREG(Gpio_Pin->Port + GPIO_O_CR) |= Gpio_Pin->Pin;
+	HWREG(FGPIO_PORTx + GPIO_O_LOCK) = FGPIO_GPIO_UNLOCK_VALUE;
+	HWREG(FGPIO_PORTx + GPIO_O_CR) |= FGPIO_PINx;
 }
 
 /*
  * Function to set the current limit and the pin type of the GPIO pin specified.
  */
 
-void fGpio_setConfig (fGpio_Pin* const Gpio_Pin)
+static void fGpio_Config (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_CURRENTx, uint32_t FGPIO_TYPEx, uint32_t GPIO_DIR_MODEx)
 {
 #ifdef	DEBUG
-	ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
-	ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
-	ASSERT_PARAM(ASSERT_CURRENT(Gpio_Pin->Current));
-	ASSERT_PARAM(ASSERT_TYPE(Gpio_Pin->Type));
+    ASSERT_PARAM(FGPIO_ASSERT_PIN(FGPIO_PINx));
+	ASSERT_PARAM(FGPIO_ASSERT_PORT(FGPIO_PORTx));
+	ASSERT_PARAM(FGPIO_ASSERT_CURRENT(FGPIO_CURRENTx));
+	ASSERT_PARAM(FGPIO_ASSERT_TYPE(FGPIO_TYPEx));
+	// Trace flow
 #endif
 
-	GPIOPadConfigSet(Gpio_Pin->Port, Gpio_Pin->Pin, Gpio_Pin->Current, Gpio_Pin->Type);
+	GPIOPadConfigSet(FGPIO_PORTx, FGPIO_PINx, FGPIO_CURRENTx, FGPIO_TYPEx);
+	GPIODirModeSet(FGPIO_PORTx, FGPIO_PINx, GPIO_DIR_MODEx);
 }
 
 /*
  * Function to set the current limit and the pin type of the GPIO pin specified.
  */
 
-void fGpio_setDirection (fGpio_Pin* const Gpio_Pin)
+static void fGpio_IntConfig (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_INTTYPEx, void (*FGPIO_INTIRQ) (void))
 {
 #ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
-    ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
-    ASSERT_PARAM(ASSERT_DIRECTION(Gpio_Pin->Direction));
+    ASSERT_PARAM(FGPIO_ASSERT_PIN(FGPIO_PINx));
+    ASSERT_PARAM(FGPIO_ASSERT_PORT(FGPIO_PORTx));
+    ASSERT_PARAM(FGPIO_ASSERT_INTTYPE(FGPIO_INTTYPEx));
+    // Trace flow
 #endif
 
-    GPIODirModeSet(Gpio_Pin->Port, Gpio_Pin->Pin, Gpio_Pin->Direction);
+    GPIOIntTypeSet(FGPIO_PORTx, FGPIO_PINx, FGPIO_INTTYPEx);
+    GPIOIntRegister(FGPIO_PORTx, FGPIO_INTIRQ);
 }
 
 /*
  * Function to turn to level high the pin specified.
  */
 
-void fGpio_setHigh (fGpio_Pin* const Gpio_Pin)
+static void fGpio_OutputInteract (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint8_t FGPIO_OUTPUTx)
 {
 #ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
-    ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
+    ASSERT_PARAM(FGPIO_ASSERT_PIN(FGPIO_PINx));
+    ASSERT_PARAM(FGPIO_ASSERT_PORT(FGPIO_PORTx));
+    ASSERT_PARAM(FGPIO_ASSERT_OUTPUT(FGPIO_OUTPUTx));
 #endif
 
-    GPIOPinWrite(Gpio_Pin->Port, Gpio_Pin->Pin, Gpio_Pin->Pin);
-}
 
-/*
- * Function to turn to level low the pin specified.
- */
-
-void fGpio_setLow (fGpio_Pin* const Gpio_Pin)
-{
-#ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
-    ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
-#endif
-
-    GPIOPinWrite(Gpio_Pin->Port, Gpio_Pin->Pin, ~(Gpio_Pin->Pin));
-}
-
-/*
- * Function to toggle the pin specified.
- */
-
-void fGpio_setToggle (fGpio_Pin* const Gpio_Pin)
-{
-#ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
-    ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
-#endif
-
-    if (fGpio_getLevel(Gpio_Pin))
-        GPIOPinWrite(Gpio_Pin->Port, Gpio_Pin->Pin, ~Gpio_Pin->Pin);
-    else
-        GPIOPinWrite(Gpio_Pin->Port, Gpio_Pin->Pin, Gpio_Pin->Pin);
+    switch (FGPIO_OUTPUTx)
+    {
+    case FGPIO_OUTPUT_HIGH:
+        GPIOPinWrite(FGPIO_PORTx, FGPIO_PINx, FGPIO_PINx);
+        break;
+    case FGPIO_OUTPUT_LOW:
+        GPIOPinWrite(FGPIO_PORTx, FGPIO_PINx, ~FGPIO_PINx);
+        break;
+    case FGPIO_OUTPUT_TOGGLE:
+        if (fGpio_InputRead(FGPIO_PINx, FGPIO_PORTx) == FGPIO_INPUT_HIGH)
+            GPIOPinWrite(FGPIO_PORTx, FGPIO_PINx, ~FGPIO_PINx);
+        else
+            GPIOPinWrite(FGPIO_PORTx, FGPIO_PINx, FGPIO_PINx);
+        break;
+    }
 }
 
 /*
  * Function to read the status of the GPIO pin specified.
  */
 
-bool fGpio_getLevel (fGpio_Pin* const Gpio_Pin)
+static uint8_t fGpio_InputRead(uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx)
 {
 #ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
-    ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
+    ASSERT_PARAM(FGPIO_ASSERT_PIN(FGPIO_PINx));
+    ASSERT_PARAM(FGPIO_ASSERT_PORT(FGPIO_PORTx));
 #endif
 
-    if (GPIOPinRead(Gpio_Pin->Port, Gpio_Pin->Pin))
-        return true;
-
-    return false;
+    if (GPIOPinRead(FGPIO_PORTx, FGPIO_PINx))
+        return FGPIO_INPUT_HIGH;
+    else
+        return FGPIO_INPUT_LOW;
 }
 
 /*
- * Completely initializes a pin.
+ * Initializes an input.
  */
 
-void fGpio_Init (fGpio_Pin* const Gpio_Pin)
+static void fGpio_InitInput (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_TYPEx, uint32_t FGPIO_CURRENTx)
 {
 #ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
-    ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
-    ASSERT_PARAM(ASSERT_DIRECTION(Gpio_Pin->Direction));
-    ASSERT_PARAM(ASSERT_CURRENT(Gpio_Pin->Current));
-    ASSERT_PARAM(ASSERT_TYPE(Gpio_Pin->Type));
+    ASSERT_PARAM(FGPIO_ASSERT_PIN(FGPIO_PINx));
+    ASSERT_PARAM(FGPIO_ASSERT_PORT(FGPIO_PORTx));
+    ASSERT_PARAM(FGPIO_ASSERT_TYPE(FGPIO_TYPEx));
+    ASSERT_PARAM(FGPIO_ASSERT_CURRENT(FGPIO_CURRENTx));
 #endif
 
-    fGpio_enableSysCtl(Gpio_Pin);
-    fGpio_unlockPin(Gpio_Pin);
-    fGpio_setDirection(Gpio_Pin);
-    fGpio_setConfig(Gpio_Pin);
+    fGpio_SysCtlStatus(FGPIO_PORTx, true);
+    fGpio_UnlockPin(FGPIO_PINx, FGPIO_PORTx);
+    fGpio_Config(FGPIO_PINx, FGPIO_PORTx, FGPIO_CURRENTx, FGPIO_TYPEx, GPIO_DIR_MODE_IN);
+}
+
+/*
+ * Initializes an input with external interrupts capabilities.
+ */
+
+static void fGpio_InitInputInt (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_TYPEx, uint32_t FGPIO_CURRENTx, uint32_t FGPIO_INTTYPEx, void (*FGPIO_INTIRQ) (void))
+{
+#ifdef  DEBUG
+    ASSERT_PARAM(FGPIO_ASSERT_PIN(FGPIO_PINx));
+    ASSERT_PARAM(FGPIO_ASSERT_PORT(FGPIO_PORTx));
+    ASSERT_PARAM(FGPIO_ASSERT_TYPE(FGPIO_TYPEx));
+    ASSERT_PARAM(FGPIO_ASSERT_CURRENT(FGPIO_CURRENTx));
+#endif
+
+    fGpio_SysCtlStatus(FGPIO_PORTx, true);
+    fGpio_UnlockPin(FGPIO_PINx, FGPIO_PORTx);
+    fGpio_Config(FGPIO_PINx, FGPIO_PORTx, FGPIO_CURRENTx, FGPIO_TYPEx, GPIO_DIR_MODE_IN);
+    fGpio_ConfigInt(FGPIO_PINx, FGPIO_PORTx, FGPIO_INTTYPEx, FGPIO_INTIRQ);
+}
+
+/*
+ * Initializes an input with external interrupts capabilities.
+ */
+
+static void fGpio_InitOutput(uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_TYPEx, uint32_t FGPIO_CURRENTx)
+{
+#ifdef  DEBUG
+    ASSERT_PARAM(FGPIO_ASSERT_PIN(FGPIO_PINx));
+    ASSERT_PARAM(FGPIO_ASSERT_PORT(FGPIO_PORTx));
+    ASSERT_PARAM(FGPIO_ASSERT_TYPE(FGPIO_TYPEx));
+    ASSERT_PARAM(FGPIO_ASSERT_CURRENT(FGPIO_CURRENTx));
+#endif
+
+    fGpio_SysCtlStatus(FGPIO_PORTx, true);
+    fGpio_UnlockPin(FGPIO_PINx, FGPIO_PORTx);
+    fGpio_Config(FGPIO_PINx, FGPIO_PORTx, FGPIO_CURRENTx, FGPIO_TYPEx, GPIO_DIR_MODE_OUT);
+}
+
+/*
+ * Initializes an input with external interrupts capabilities.
+ */
+
+static void fGpio_InitAlternateFunction(uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_TYPEx, uint32_t FGPIO_CURRENTx, uint32_t GPIO_AF)
+{
+#ifdef  DEBUG
+    ASSERT_PARAM(FGPIO_ASSERT_PIN(FGPIO_PINx));
+    ASSERT_PARAM(FGPIO_ASSERT_PORT(FGPIO_PORTx));
+    ASSERT_PARAM(FGPIO_ASSERT_TYPE(FGPIO_TYPEx));
+    ASSERT_PARAM(FGPIO_ASSERT_CURRENT(FGPIO_CURRENTx));
+#endif
+
+    fGpio_SysCtlStatus(FGPIO_PORTx, true);
+    fGpio_UnlockPin(FGPIO_PINx, FGPIO_PORTx);
+    fGpio_Config(FGPIO_PINx, FGPIO_PORTx, FGPIO_CURRENTx, FGPIO_TYPEx, GPIO_DIR_MODE_HW);
+    GPIOPinConfigure(GPIO_AF);
 }
 
 /*
  * Configures the internal interrupt on a pin, and enables it by default.
  */
 
-void fGpio_IntInit (fGpio_Pin* const Gpio_Pin)
+static void fGpio_IntStatus (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint8_t FGPIO_INTx)
 {
 #ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
-    ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
-    ASSERT_PARAM(ASSERT_INTTYPE(Gpio_Pin->IntType));
+    ASSERT_PARAM(FGPIO_ASSERT_PIN(FGPIO_PINx));
+    ASSERT_PARAM(FGPIO_ASSERT_PORT(FGPIO_PORTx));
+    ASSERT_PARAM(FGPIO_ASSERT_INT(FGPIO_INTx));
 #endif
 
-    GPIOIntTypeSet(Gpio_Pin->Port, Gpio_Pin->Pin, Gpio_Pin->IntType);
-    GPIOIntRegister(Gpio_Pin->Port, Gpio_Pin->IntIRQ);
-    GPIOIntEnable(Gpio_Pin->Port, fGpio_getIntPin(Gpio_Pin));
+    if (FGPIO_INTx == FGPIO_INT_ON)
+        GPIOIntEnable(FGPIO_PORTx, fGpio_IntGetPin(FGPIO_PINx));
+    else
+        GPIOIntDisable(FGPIO_PORTx, fGpio_IntGetPin(FGPIO_PINx));
 }
 
 /*
  * Clears the interrupt.
  */
 
-void fGpio_IntClear (fGpio_Pin* const Gpio_Pin)
+static void fGpio_IntClear (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx)
 {
 #ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
-    ASSERT_PARAM(ASSERT_PIN(Gpio_Pin->Pin));
+    ASSERT_PARAM(FGPIO_ASSERT_PIN(FGPIO_PINx));
+    ASSERT_PARAM(FGPIO_ASSERT_PORT(FGPIO_PORTx));
 #endif
 
-
-    GPIOIntClear(Gpio_Pin->Port, Gpio_Pin->Pin);
+    GPIOIntClear(FGPIO_PORTx, FGPIO_PINx);
 }
 
 /*
  * Returns the status of the masekd external interrupts on the specified port.
  */
 
-uint32_t fGpio_IntGet (fGpio_Pin* const Gpio_Pin)
+static uint8_t fGpio_IntTest (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx)
 {
 #ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_PORT(Gpio_Pin->Port));
+    ASSERT_PARAM(FGPIO_ASSERT_PIN(FGPIO_PINx));
+    ASSERT_PARAM(FGPIO_ASSERT_PORT(FGPIO_PORTx));
 #endif
 
-    return GPIOIntStatus(Gpio_Pin->Port, true);
-}
-
-/*
- * Sets the GPIO pin to be controlled by the specified peripheral.
- *
- * NOTE: It is very time consumming to implement features to check the arguments in this function. IT'S ENTIRELY UP TO THE USER TO PROVIDE CORRECT ARGUMENTS IN THE ALTERNATE FUNCTION MEMBER OF THE STRUCTURE.
- */
-
-void fGpio_setAlternateFunction (fGpio_Pin* const Gpio_Pin)
-{
-    if (Gpio_Pin->AlternateFunction != FGPIO_AF_NOAF)
-    {
-        GPIOPinConfigure(Gpio_Pin->AlternateFunction);
-    }
+    if (GPIOIntStatus(FGPIO_PORTx, true) & FGPIO_PINx)
+        return FGPIO_INT_ON;
+    else
+        return FGPIO_INT_OFF;
 }
