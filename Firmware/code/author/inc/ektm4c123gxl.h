@@ -48,10 +48,10 @@ typedef struct
 #define EKTM4C123GXL_PB1         (0x01)
 #define EKTM4C123GXL_PB2         (0x02)
 
+#define EKTM4C123GXL_UART_DBG 0x01
+
 #define EKTM4C123GXL_STATUS_ON   (0x01)
 #define EKTM4C123GXL_STATUS_OFF  (0x00)
-
-#define UARTDBG 0x01
 
 /* Exported macro ------------------------------------------------------------*/
 

@@ -43,27 +43,38 @@
 #define EKTM4C123GXL_PB2_PIN      FGPIO_PIN_0
 #define EKTM4C123GXL_PB2_PORT     FGPIO_PORT_F
 
-#define UARTDBG_RX_PIN  GPIO_PIN_0
-#define UARTDBG_RX_PORT GPIO_PORTA_BASE
-#define UARTDBG_RX_AF   GPIO_PA0_U0RX
+#define	EKTM4C123GXL_UARTDBG_MODULE			FUART_MODULE_0
+#define	EKTM4C123GXL_UARTDBG_WORD_BITS		FUART_WORD_BITS_EIGTH
+#define EKTM4C123GXL_UARTDBG_STOP_BITS		FUART_STOP_BITS_ONE
+#define EKTM4C123GXL_UARTDBG_PARITY			FUART_PARITY_NONE
+#define EKTM4C123GXL_UARTDBG_CLOCKSOURCE	FUART_CLOCK_SOURCE_SYSTEM
+#define EKTM4C123GXL_UARTDBG_BAUDRATE		FUART_BAUDRATE_115200
 
-#define UARTDBG_TX_PIN  GPIO_PIN_1
-#define UARTDBG_TX_PORT GPIO_PORTA_BASE
-#define UARTDBG_TX_AF   GPIO_PA1_U0TX
+#define EKTM4C123GXL_UARTDBG_RX_PIN  		FGPIO_PIN_0
+#define EKTM4C123GXL_UARTDBG_RX_PORT 		FGPIO_PORT_A
+#define EKTM4C123GXL_UARTDBG_RX_AF   		GPIO_PA0_U0RX
+#define EKTM4C123GXL_UARTDBG_RX_TYPE		FGPIO_TYPE_PUSH_PULL_PULLDOWN
+#define EKTM4C123GXL_UARTDBG_RX_CURRENT		FGPIO_CURRENT_2MA
 
-#define UARTDBG_RXBUF_SIZE   50
-#define UARTDBG_TXBUF_SIZE   50
+#define EKTM4C123GXL_UARTDBG_TX_PIN  		FGPIO_PIN_1
+#define EKTM4C123GXL_UARTDBG_TX_PORT 		FGPIO_PORT_A
+#define EKTM4C123GXL_UARTDBG_TX_AF   		GPIO_PA1_U0TX
+#define EKTM4C123GXL_UARTDBG_TX_TYPE		FGPIO_TYPE_PUSH_PULL_PULLDOWN
+#define EKTM4C123GXL_UARTDBG_TX_CURRENT		FGPIO_CURRENT_2MA
 
-#define UARTDBG_CMD_DELIMITER   '\n'
-#define UARTDBG_CMD_HELLO       "Are you there?\r\n"
-#define UARTDBG_CMD_HEY         "Yes, I'm here.\r\n"
-#define UARTDBG_CMD_UNKNOWN     "I have no idea what you are talking about.\r\n"
+#define EKTM4C123GXL_UARTDBG_RXBUF_SIZE   50
+#define EKTM4C123GXL_UARTDBG_TXBUF_SIZE   50
+
+#define EKTM4C123GXL_UARTDBG_CMD_DELIMITER   '\n'
+#define EKTM4C123GXL_UARTDBG_CMD_HELLO       "Are you there?\r\n"
+#define EKTM4C123GXL_UARTDBG_CMD_HEY         "Yes, I'm here.\r\n"
+#define EKTM4C123GXL_UARTDBG_CMD_UNKNOWN     "I have no idea what you are talking about.\r\n"
 
 /* Private macro -------------------------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
-fUart_Mod* UartDbg;
 fGpio_Class* GpioClass;
+fUart_Class* UartClass;
 
 /* Private function prototypes -----------------------------------------------*/
 static void ektm4c123gxl_LED_Init (uint8_t LEDx);
@@ -77,6 +88,9 @@ static void ektm4c123gxl_PB_IntInit (uint8_t PBx, void (*PB_INTIRQ) (void));
 static uint8_t ektm4c123gxl_PB_IntTest (uint8_t EKTM4C123GXL_PBx);
 static void ektm4c123gxl_PB_IntClear (uint8_t EKTM4C123GXL_PBx);
 static void ektm4c123gxl_PB_IntStatus (uint8_t EKTM4C123GXL_PBx, uint8_t EKTM4C123GXL_STATUSx);
+
+static uint8_t ektm4c123gxl_UART_IntInit (uint8_t EKTM4C123GXL_UARTx);
+static void ektm4c123gxl_UartDbg_Irq (void);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -93,6 +107,10 @@ ektm4c123gxl_Class* ektm4c123gxl_CreateClass (void)
     GpioClass = fGpio_CreateClass();
     if (GpioClass == NULL)
         return NULL;
+
+    UartClass = fUart_CreateClass();
+    if (UartClass == NULL)
+    	return NULL;
 
     temp->LED_Init = ektm4c123gxl_LED_Init;
     temp->LED_Off = ektm4c123gxl_LED_Off;
@@ -266,63 +284,83 @@ static void ektm4c123gxl_PB_IntStatus (uint8_t EKTM4C123GXL_PBx, uint8_t EKTM4C1
  * Initializes the specified UART interface.
  */
 
-bool brd_UartInit (uint8_t UARTx)
+static uint8_t ektm4c123gxl_UART_IntInit (uint8_t EKTM4C123GXL_UARTx)
 {
-    switch (UARTx)
-    {
-    case UARTDBG:
-    	UartDbg = (fUart_Mod*) calloc (1, sizeof(fUart_Mod));
-    	if (UartDbg == (fUart_Mod*) NULL)
-    		return false;
-    	UartDbg->Rx = (fUart_Pin*) calloc(1, sizeof(fUart_Pin));
-        if (UartDbg->Rx == (fUart_Pin*) NULL)
-            return false;
-    	UartDbg->Tx = (fUart_Pin*) calloc(1, sizeof(fUart_Pin));
-        if (UartDbg->Tx == (fUart_Pin*) NULL)
-            return false;
+	uint32_t *GpioPin, *GpioPort, *GpioCurrent, *GpioType, *GpioAlternateFunction;
+	fUart_InitStruct* UartStruct;
+	uint8_t result = EKTM4C123GXL_STATUS_OFF;
 
-        UartDbg->Rx->Pin = UARTDBG_RX_PIN;
-        UartDbg->Rx->Port = UARTDBG_RX_PORT;
-        UartDbg->Rx->AlternateFunction = UARTDBG_RX_AF;
-        UartDbg->Rx->Current = CURR_2MA;
-        UartDbg->Rx->Type = TYPE_PP_PD;
+	switch (EKTM4C123GXL_UARTx)
+	{
+	case EKTM4C123GXL_UART_DBG:
+		UartStruct = malloc(sizeof(fUart_InitStruct));
+		if (UartStruct == NULL) return result;
 
-        UartDbg->Tx->Pin = UARTDBG_TX_PIN;
-        UartDbg->Tx->Port = UARTDBG_TX_PORT;
-        UartDbg->Tx->AlternateFunction = UARTDBG_TX_AF;
-        UartDbg->Tx->Current = CURR_2MA;
-        UartDbg->Tx->Type = TYPE_PP_PD;
+		UartStruct->nPins = 2;
+		GpioPin = malloc(sizeof(uint32_t) * UartStruct->nPins);
+		if (GpioPin == NULL) return result;
+		GpioPort = malloc(sizeof(uint32_t) * UartStruct->nPins);
+		if (GpioPort == NULL) return result;
+		GpioCurrent = malloc(sizeof(uint32_t) * UartStruct->nPins);
+		if (GpioCurrent == NULL) return result;
+		GpioType = malloc(sizeof(uint32_t) * UartStruct->nPins);
+		if (GpioType == NULL) return result;
+		GpioAlternateFunction = malloc(sizeof(uint32_t) * UartStruct->nPins);
+		if (GpioAlternateFunction == NULL) return result;
 
-        UartDbg->Module = MOD_UART0;
-        UartDbg->ClockSource = CLK_SYSTEM;
-        UartDbg->Parity = PAR_NONE;
-        UartDbg->Stop = STOP_ONE;
-        UartDbg->Wlen = WLEN_EIGTH;
-        UartDbg->BaudRate = BR_115200;
+		GpioPin[0] = EKTM4C123GXL_UARTDBG_RX_PIN;
+		GpioPort[0] = EKTM4C123GXL_UARTDBG_RX_PORT;
+		GpioCurrent[0] = EKTM4C123GXL_UARTDBG_RX_CURRENT;
+		GpioType[0] = EKTM4C123GXL_UARTDBG_RX_TYPE;
+		GpioAlternateFunction[0] = EKTM4C123GXL_UARTDBG_RX_AF;
 
-        UartDbg->Interrupts = INT_RECEIVE | INT_TRANSMIT | INT_OVERRUN_ERROR | INT_BREAK_ERROR | INT_PARITY_ERROR | INT_FRAMING_ERROR | INT_RECEIVE_TIMEOUT;
-        UartDbg->IntIRQ = brd_UartDbgISR;
+		GpioPin[1] = EKTM4C123GXL_UARTDBG_TX_PIN;
+		GpioPort[1] = EKTM4C123GXL_UARTDBG_TX_PORT;
+		GpioCurrent[1] = EKTM4C123GXL_UARTDBG_TX_CURRENT;
+		GpioType[1] = EKTM4C123GXL_UARTDBG_TX_TYPE;
+		GpioAlternateFunction[1] = EKTM4C123GXL_UARTDBG_TX_AF;
 
-        UartDbg->RxBuf = (uint8_t*) calloc(UARTDBG_RXBUF_SIZE, sizeof(uint8_t));
-        if (UartDbg->RxBuf == NULL)
-        	return false;
-        UartDbg->RxBufProcIndex = 0;
-        UartDbg->RxBufUnprocIndex = 0;
-        UartDbg->RxBufLength = UARTDBG_RXBUF_SIZE;
+		UartStruct->GpioPin = GpioPin;
+		UartStruct->GpioPort = GpioPort;
+		UartStruct->GpioCurrent = GpioCurrent;
+		UartStruct->GpioType = GpioType;
+		UartStruct->GpioAlternateFunction = GpioAlternateFunction;
 
-        UartDbg->TxBuf = (uint8_t*) calloc(UARTDBG_TXBUF_SIZE, sizeof(uint8_t));
-        if (UartDbg->TxBuf == NULL)
-        	return false;
-        UartDbg->TxBufProcIndex = 0;
-        UartDbg->TxBufUnprocIndex = 0;
-        UartDbg->TxBufLength = UARTDBG_TXBUF_SIZE;
+		UartStruct->Module = EKTM4C123GXL_UARTDBG_MODULE;
+		UartStruct->WordBits = EKTM4C123GXL_UARTDBG_WORD_BITS;
+		UartStruct->StopBits = EKTM4C123GXL_UARTDBG_STOP_BITS;
+		UartStruct->ClockSource = EKTM4C123GXL_UARTDBG_CLOCKSOURCE;
+		UartStruct->Parity = EKTM4C123GXL_UARTDBG_PARITY;
+		UartStruct->BaudRate = EKTM4C123GXL_UARTDBG_BAUDRATE;
 
-        fUart_Init(UartDbg);
+		UartClass->IntInit(UartStruct, GpioClass, FUART_INT_RECEIVE, ektm4c123gxl_UartDbg_Irq);
 
-        return true;
-    default:
-    	return false;
-    }
+		free(GpioPin);
+		free(GpioPort);
+		free(GpioType);
+		free(GpioCurrent);
+		free(GpioAlternateFunction);
+		free(UartStruct);
+
+
+		result = EKTM4C123GXL_STATUS_ON;
+		break;
+	}
+
+	return result;
+}
+
+/*
+ * IRQ Handler for the UART DBG.
+ */
+
+static void ektm4c123gxl_UartDbg_Irq (void)
+{
+	uint32_t IntVal;
+
+	IntVal = UartClass->IntGet(EKTM4C123GXL_UARTDBG_MODULE, FUART_INT_RECEIVE | FUART_INT_TRANSMIT);
+
+
 }
 
 /*
