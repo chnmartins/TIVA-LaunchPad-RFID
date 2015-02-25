@@ -25,33 +25,40 @@
 #include <stdint.h>
 
 /* Exported types ------------------------------------------------------------*/
+typedef struct
+{
+    void (*LED_Init) (uint8_t EKTM4C123GXL_LEDx);
+    void (*LED_On) (uint8_t EKTM4C123GXL_LEDx);
+    void (*LED_Off) (uint8_t EKTM4C123GXL_LEDx);
+    void (*LED_Toggle) (uint8_t EKTM4C123GXL_LEDx);
+
+    void (*PB_Init) (uint8_t EKTM4C123GXL_PBx);
+    uint8_t (*PB_Read) (uint8_t EKTM4C123GXL_PBx);
+    void (*PB_IntInit) (uint8_t EKTM4C123GXL_PBx, void (*EKTM4C123GXL_PB_INTIRQ) (void));
+    uint8_t (*PB_IntTest) (uint8_t EKTM4C123GXL_PBx);
+    void (*PB_IntClear) (uint8_t EKTM4C123GXL_PBx);
+    void (*PB_IntStatus) (uint8_t EKTM4C123GXL_PBx, uint8_t EKTM4C123GXL_STATUSx);
+} ektm4c123gxl_Class;
 
 /* Exported constants --------------------------------------------------------*/
-#define LEDR    0x01
-#define LEDG    0x02
-#define LEDB    0x04
+#define EKTM4C123GXL_LEDR        (0x01)
+#define EKTM4C123GXL_LEDB        (0x02)
+#define EKTM4C123GXL_LEDG        (0x04)
 
-#define LED_ON      0x01
-#define LED_OFF     0x02
-#define LED_TOGGLE  0x03
+#define EKTM4C123GXL_PB1         (0x01)
+#define EKTM4C123GXL_PB2         (0x02)
 
-#define PB1     0x01
-#define PB2     0x02
-
-#define PB1_ON  0x01
-#define PB2_ON  0x02
+#define EKTM4C123GXL_STATUS_ON   (0x01)
+#define EKTM4C123GXL_STATUS_OFF  (0x00)
 
 #define UARTDBG 0x01
 
 /* Exported macro ------------------------------------------------------------*/
 
 /* Exported functions --------------------------------------------------------*/
-void brd_LedInit (uint8_t LEDx);
-void brd_LedInteract (uint8_t LEDx, uint8_t interact);
-void brd_PushButtonInit (uint8_t PBx);
-uint8_t brd_PushButtonRead (uint8_t PBx);
-void brd_PushButtonInitInt (uint8_t PBx, void (*IntIRQ) (void));
-uint8_t brd_PushButtonGetInt (uint8_t PBx);
+ektm4c123gxl_Class* ektm4c123gxl_CreateClass (void);
+void ektm4c123gxl_DestroyClass (ektm4c123gxl_Class* class);
+
 bool brd_UartInit (uint8_t UARTx);
 void brd_UartDbgISR (void);
 void brd_UartSend (uint8_t UARTx, const uint8_t* data);
