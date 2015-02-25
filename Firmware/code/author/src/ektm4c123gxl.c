@@ -204,11 +204,15 @@ static void ektm4c123gxl_PB_IntInit (uint8_t EKTM4C123GXL_PBx, void (*EKTM4C123G
 static uint8_t ektm4c123gxl_PB_IntTest (uint8_t EKTM4C123GXL_PBx)
 {
     if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB1)
+    {
         if (GpioClass->IntTest(EKTM4C123GXL_PB1_PIN, EKTM4C123GXL_PB1_PORT) == FGPIO_INT_ON)
             return EKTM4C123GXL_STATUS_ON;
+    }
     else if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB2)
+    {
         if (GpioClass->IntTest(EKTM4C123GXL_PB2_PIN, EKTM4C123GXL_PB2_PORT) == FGPIO_INT_ON)
             return EKTM4C123GXL_STATUS_ON;
+    }
 
     return EKTM4C123GXL_STATUS_OFF;
 }

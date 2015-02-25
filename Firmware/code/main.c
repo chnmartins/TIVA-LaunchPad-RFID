@@ -54,6 +54,7 @@ void PB_IRQ (void)
         board->LED_Toggle(EKTM4C123GXL_LEDB);
         board->PB_IntClear(EKTM4C123GXL_PB1);
     }
+
     if (board->PB_IntTest(EKTM4C123GXL_PB2) == EKTM4C123GXL_STATUS_ON)
     {
         board->LED_Toggle(EKTM4C123GXL_LEDG);
@@ -66,8 +67,8 @@ int main (void)
     board = ektm4c123gxl_CreateClass();
 
     board->LED_Init(EKTM4C123GXL_LEDB | EKTM4C123GXL_LEDG | EKTM4C123GXL_LEDR);
-    board->PB_IntInit(EKTM4C123GXL_PB1, PB_IRQ);
-    board->PB_IntStatus(EKTM4C123GXL_PB1, EKTM4C123GXL_STATUS_ON);
+    board->PB_IntInit(EKTM4C123GXL_PB1 | EKTM4C123GXL_PB2, PB_IRQ);
+    board->PB_IntStatus(EKTM4C123GXL_PB1 | EKTM4C123GXL_PB2, EKTM4C123GXL_STATUS_ON);
 
     board->LED_Off(EKTM4C123GXL_LEDB | EKTM4C123GXL_LEDG | EKTM4C123GXL_LEDR);
 
