@@ -113,6 +113,7 @@ static void fUart_IntClear (uint32_t FUART_MODULEx, uint32_t FUART_INTx);
 
 static void fUart_SendByte (uint32_t FUART_MODULEx, uint8_t byte);
 static void fUart_SendBytes (uint32_t FUART_MODULEx, uint8_t* bytes, uint8_t length);
+static uint8_t fUart_ReadByte (uint32_t FUART_MODULEx);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -129,6 +130,7 @@ fUart_Class* fUart_CreateClass (void)
 	class->Init = fUart_Init;
 	class->SendByte = fUart_SendByte;
 	class->SendBytes = fUart_SendBytes;
+	class->ReadByte = fUart_ReadByte;
 
 	class->IntInit = fUart_IntInit;
 	class->IntTest = fUart_IntTest;
@@ -390,117 +392,14 @@ static void fUart_SendBytes (uint32_t FUART_MODULEx, uint8_t* bytes, uint8_t len
 }
 
 /*
- * Function to call on the IRQ handler of the UART interface.
+ * Reads a character.
  */
 
-void fUart_IRQHandler (fUart_Mod* Uart_Mod)
-{
-    uint32_t val;
-
-    val = fUart_IntGet(Uart_Mod);
-
-    if (val & INT_9BIT)
-    {
-
-    	UARTIntClear(Uart_Mod->Module, INT_9BIT);
-    }
-    if (val & INT_OVERRUN_ERROR)
-    {
-
-    	UARTIntClear(Uart_Mod->Module, INT_OVERRUN_ERROR);
-    }
-    if (val & INT_BREAK_ERROR)
-    {
-
-    	UARTIntClear(Uart_Mod->Module, INT_BREAK_ERROR);
-    }
-    if (val & INT_PARITY_ERROR)
-    {
-
-    	UARTIntClear(Uart_Mod->Module, INT_PARITY_ERROR);
-    }
-    if (val & INT_FRAMING_ERROR)
-    {
-
-    	UARTIntClear(Uart_Mod->Module, INT_FRAMING_ERROR);
-    }
-    if (val & INT_RECEIVE_TIMEOUT)
-    {
-
-    	UARTIntClear(Uart_Mod->Module, INT_RECEIVE_TIMEOUT);
-    }
-    if (val & INT_TRANSMIT)
-    {
-        if (Uart_Mod->TxBufProcIndex != Uart_Mod->TxBufUnprocIndex)
-        {
-            UARTCharPut(Uart_Mod->Module, *(Uart_Mod->TxBuf + Uart_Mod->TxBufProcIndex++));
-
-            if (Uart_Mod->TxBufProcIndex >= Uart_Mod->TxBufLength)
-                Uart_Mod->TxBufProcIndex = 0;
-        }
-        else
-        {
-            UARTIntDisable(Uart_Mod->Module, INT_TRANSMIT);
-        }
-
-    	UARTIntClear(Uart_Mod->Module, INT_TRANSMIT);
-    }
-    if (val & INT_RECEIVE)
-    {
-        *(Uart_Mod->RxBuf + Uart_Mod->RxBufUnprocIndex++) = UARTCharGet(Uart_Mod->Module);
-
-        if (Uart_Mod->RxBufUnprocIndex >= Uart_Mod->RxBufLength)
-            Uart_Mod->RxBufUnprocIndex = 0;
-
-    	UARTIntClear(Uart_Mod->Module, INT_RECEIVE);
-    }
-    if (val & INT_DSR)
-    {
-
-    	UARTIntClear(Uart_Mod->Module, INT_DSR);
-    }
-    if (val & INT_DCD)
-    {
-
-    	UARTIntClear(Uart_Mod->Module, INT_DCD);
-    }
-    if (val & INT_CTS)
-    {
-
-    	UARTIntClear(Uart_Mod->Module, INT_CTS);
-    }
-    if (val & INT_RI)
-    {
-
-    	UARTIntClear(Uart_Mod->Module, INT_RI);
-    }
-}
-
-/*
- * Transmits the specified data over on TxBuf over the specified interface.
- */
-
-bool fUart_BeginTransfer (fUart_Mod* Uart_Mod, const uint8_t* data, uint8_t length)
+static uint8_t fUart_ReadByte (uint32_t FUART_MODULEx)
 {
 #ifdef  DEBUG
-    ASSERT_PARAM(ASSERT_UART(Uart_Mod->Module));
+    ASSERT_PARAM(FUART_ASSERT_MODULE(FUART_MODULEx));
 #endif
 
-    if (length >= Uart_Mod->TxBufLength)
-        return false;
-
-    while (Uart_Mod->TxBufProcIndex != Uart_Mod->TxBufUnprocIndex);
-
-    while (length--) {
-        *(Uart_Mod->TxBuf + Uart_Mod->TxBufUnprocIndex++) = *(data++);
-
-
-        if (Uart_Mod->TxBufUnprocIndex >= Uart_Mod->TxBufLength)
-            Uart_Mod->TxBufUnprocIndex = 0;
-    }
-
-    UARTCharPut(Uart_Mod->Module, 0);
-    UARTIntEnable(Uart_Mod->Module, INT_TRANSMIT);
-
-    return true;
+    return UARTCharGet(FUART_MODULEx);
 }

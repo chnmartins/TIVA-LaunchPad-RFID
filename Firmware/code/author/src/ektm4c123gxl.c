@@ -29,8 +29,16 @@
 #include "conf.h"
 
 /* Private typedef -----------------------------------------------------------*/
+typedef struct
+{
+    uint8_t* data;
+    uint8_t Length;
+    uint8_t IndexProc;
+    uint8_t IndexUnproc;
+} ektm4c123gxl_CircularBuffer;
 
 /* Private define ------------------------------------------------------------*/
+/******** LEDS */
 #define EKTM4C123GXL_LEDR_PIN     FGPIO_PIN_1
 #define EKTM4C123GXL_LEDR_PORT    FGPIO_PORT_F
 #define EKTM4C123GXL_LEDB_PIN     FGPIO_PIN_2
@@ -38,11 +46,13 @@
 #define EKTM4C123GXL_LEDG_PIN     FGPIO_PIN_3
 #define EKTM4C123GXL_LEDG_PORT    FGPIO_PORT_F
 
+/******** PUSHBUTTONS */
 #define EKTM4C123GXL_PB1_PIN      FGPIO_PIN_4
 #define EKTM4C123GXL_PB1_PORT     FGPIO_PORT_F
 #define EKTM4C123GXL_PB2_PIN      FGPIO_PIN_0
 #define EKTM4C123GXL_PB2_PORT     FGPIO_PORT_F
 
+/******** UART DEBUG */
 #define	EKTM4C123GXL_UARTDBG_MODULE			FUART_MODULE_0
 #define	EKTM4C123GXL_UARTDBG_WORD_BITS		FUART_WORD_BITS_EIGTH
 #define EKTM4C123GXL_UARTDBG_STOP_BITS		FUART_STOP_BITS_ONE
@@ -75,6 +85,8 @@
 /* Private variables ---------------------------------------------------------*/
 fGpio_Class* GpioClass;
 fUart_Class* UartClass;
+ektm4c123gxl_CircularBuffer* UartDbgTxBuf;
+ektm4c123gxl_CircularBuffer* UartDbgRxBuf;
 
 /* Private function prototypes -----------------------------------------------*/
 static void ektm4c123gxl_LED_Init (uint8_t LEDx);
@@ -90,6 +102,8 @@ static void ektm4c123gxl_PB_IntClear (uint8_t EKTM4C123GXL_PBx);
 static void ektm4c123gxl_PB_IntStatus (uint8_t EKTM4C123GXL_PBx, uint8_t EKTM4C123GXL_STATUSx);
 
 static uint8_t ektm4c123gxl_UART_IntInit (uint8_t EKTM4C123GXL_UARTx);
+uint8_t ektm4c123gxl_UART_SendString (uint8_t EKTM4C123GXL_UARTx, uint8_t* string);
+static void ektm4c123gxl_UART_Parse (uint8_t EKTM4C123GXL_UARTx);
 static void ektm4c123gxl_UartDbg_Irq (void);
 
 /* Private functions ---------------------------------------------------------*/
@@ -123,6 +137,10 @@ ektm4c123gxl_Class* ektm4c123gxl_CreateClass (void)
     temp->PB_IntStatus = ektm4c123gxl_PB_IntStatus;
     temp->PB_IntClear = ektm4c123gxl_PB_IntClear;
     temp->PB_IntTest = ektm4c123gxl_PB_IntTest;
+
+    temp->UART_IntInit = ektm4c123gxl_UART_IntInit;
+    temp->UART_SendString = ektm4c123gxl_UART_SendString;
+    temp->UART_Parse = ektm4c123gxl_UART_Parse;
 
     return temp;
 }
@@ -286,7 +304,6 @@ static void ektm4c123gxl_PB_IntStatus (uint8_t EKTM4C123GXL_PBx, uint8_t EKTM4C1
 
 static uint8_t ektm4c123gxl_UART_IntInit (uint8_t EKTM4C123GXL_UARTx)
 {
-	uint32_t *GpioPin, *GpioPort, *GpioCurrent, *GpioType, *GpioAlternateFunction;
 	fUart_InitStruct* UartStruct;
 	uint8_t result = EKTM4C123GXL_STATUS_OFF;
 
@@ -296,35 +313,48 @@ static uint8_t ektm4c123gxl_UART_IntInit (uint8_t EKTM4C123GXL_UARTx)
 		UartStruct = malloc(sizeof(fUart_InitStruct));
 		if (UartStruct == NULL) return result;
 
+		UartDbgRxBuf = malloc(sizeof(ektm4c123gxl_CircularBuffer));
+		if (UartDbgRxBuf == NULL) return result;
+
+		UartDbgTxBuf = malloc(sizeof(ektm4c123gxl_CircularBuffer));
+		if (UartDbgTxBuf == NULL) return result;
+
+        UartDbgRxBuf->Length = EKTM4C123GXL_UARTDBG_RXBUF_SIZE;
+		UartDbgRxBuf->data = malloc(sizeof(uint8_t) * UartDbgRxBuf->Length);
+		if (UartDbgRxBuf->data == NULL) return result;
+
+        UartDbgTxBuf->Length = EKTM4C123GXL_UARTDBG_TXBUF_SIZE;
+		UartDbgTxBuf->data = malloc(sizeof(uint8_t) * UartDbgTxBuf->Length);
+		if (UartDbgTxBuf->data == NULL) return result;
+
+		UartDbgTxBuf->IndexProc = 0;
+		UartDbgTxBuf->IndexUnproc = 0;
+		UartDbgRxBuf->IndexProc = 0;
+		UartDbgRxBuf->IndexUnproc = 0;
+
 		UartStruct->nPins = 2;
-		GpioPin = malloc(sizeof(uint32_t) * UartStruct->nPins);
-		if (GpioPin == NULL) return result;
-		GpioPort = malloc(sizeof(uint32_t) * UartStruct->nPins);
-		if (GpioPort == NULL) return result;
-		GpioCurrent = malloc(sizeof(uint32_t) * UartStruct->nPins);
-		if (GpioCurrent == NULL) return result;
-		GpioType = malloc(sizeof(uint32_t) * UartStruct->nPins);
-		if (GpioType == NULL) return result;
-		GpioAlternateFunction = malloc(sizeof(uint32_t) * UartStruct->nPins);
-		if (GpioAlternateFunction == NULL) return result;
+		UartStruct->GpioPin = malloc(sizeof(uint32_t) * UartStruct->nPins);
+		if (UartStruct->GpioPin == NULL) return result;
+		UartStruct->GpioPort = malloc(sizeof(uint32_t) * UartStruct->nPins);
+		if (UartStruct->GpioPort == NULL) return result;
+		UartStruct->GpioCurrent = malloc(sizeof(uint32_t) * UartStruct->nPins);
+		if (UartStruct->GpioCurrent == NULL) return result;
+		UartStruct->GpioType = malloc(sizeof(uint32_t) * UartStruct->nPins);
+		if (UartStruct->GpioType == NULL) return result;
+		UartStruct->GpioAlternateFunction = malloc(sizeof(uint32_t) * UartStruct->nPins);
+		if (UartStruct->GpioAlternateFunction == NULL) return result;
 
-		GpioPin[0] = EKTM4C123GXL_UARTDBG_RX_PIN;
-		GpioPort[0] = EKTM4C123GXL_UARTDBG_RX_PORT;
-		GpioCurrent[0] = EKTM4C123GXL_UARTDBG_RX_CURRENT;
-		GpioType[0] = EKTM4C123GXL_UARTDBG_RX_TYPE;
-		GpioAlternateFunction[0] = EKTM4C123GXL_UARTDBG_RX_AF;
+		UartStruct->GpioPin[0] = EKTM4C123GXL_UARTDBG_RX_PIN;
+		UartStruct->GpioPort[0] = EKTM4C123GXL_UARTDBG_RX_PORT;
+		UartStruct->GpioCurrent[0] = EKTM4C123GXL_UARTDBG_RX_CURRENT;
+		UartStruct->GpioType[0] = EKTM4C123GXL_UARTDBG_RX_TYPE;
+		UartStruct->GpioAlternateFunction[0] = EKTM4C123GXL_UARTDBG_RX_AF;
 
-		GpioPin[1] = EKTM4C123GXL_UARTDBG_TX_PIN;
-		GpioPort[1] = EKTM4C123GXL_UARTDBG_TX_PORT;
-		GpioCurrent[1] = EKTM4C123GXL_UARTDBG_TX_CURRENT;
-		GpioType[1] = EKTM4C123GXL_UARTDBG_TX_TYPE;
-		GpioAlternateFunction[1] = EKTM4C123GXL_UARTDBG_TX_AF;
-
-		UartStruct->GpioPin = GpioPin;
-		UartStruct->GpioPort = GpioPort;
-		UartStruct->GpioCurrent = GpioCurrent;
-		UartStruct->GpioType = GpioType;
-		UartStruct->GpioAlternateFunction = GpioAlternateFunction;
+		UartStruct->GpioPin[1] = EKTM4C123GXL_UARTDBG_TX_PIN;
+		UartStruct->GpioPort[1] = EKTM4C123GXL_UARTDBG_TX_PORT;
+		UartStruct->GpioCurrent[1] = EKTM4C123GXL_UARTDBG_TX_CURRENT;
+		UartStruct->GpioType[1] = EKTM4C123GXL_UARTDBG_TX_TYPE;
+		UartStruct->GpioAlternateFunction[1] = EKTM4C123GXL_UARTDBG_TX_AF;
 
 		UartStruct->Module = EKTM4C123GXL_UARTDBG_MODULE;
 		UartStruct->WordBits = EKTM4C123GXL_UARTDBG_WORD_BITS;
@@ -335,13 +365,12 @@ static uint8_t ektm4c123gxl_UART_IntInit (uint8_t EKTM4C123GXL_UARTx)
 
 		UartClass->IntInit(UartStruct, GpioClass, FUART_INT_RECEIVE, ektm4c123gxl_UartDbg_Irq);
 
-		free(GpioPin);
-		free(GpioPort);
-		free(GpioType);
-		free(GpioCurrent);
-		free(GpioAlternateFunction);
+		free(UartStruct->GpioPin);
+		free(UartStruct->GpioPort);
+		free(UartStruct->GpioCurrent);
+		free(UartStruct->GpioType);
+		free(UartStruct->GpioAlternateFunction);
 		free(UartStruct);
-
 
 		result = EKTM4C123GXL_STATUS_ON;
 		break;
@@ -358,83 +387,104 @@ static void ektm4c123gxl_UartDbg_Irq (void)
 {
 	uint32_t IntVal;
 
-	IntVal = UartClass->IntGet(EKTM4C123GXL_UARTDBG_MODULE, FUART_INT_RECEIVE | FUART_INT_TRANSMIT);
+	IntVal = UartClass->IntGet(EKTM4C123GXL_UARTDBG_MODULE, FUART_INT_RECEIVE | FUART_INT_TRANSMIT, EKTM4C123GXL_STATUS_ON);
 
+	if (IntVal & FUART_INT_RECEIVE)
+	{
+	    UartDbgRxBuf->data[UartDbgRxBuf->IndexUnproc++] = UartClass->ReadByte(EKTM4C123GXL_UARTDBG_MODULE);
 
+	    if (UartDbgRxBuf->IndexUnproc >= UartDbgRxBuf->Length)
+	        UartDbgRxBuf->IndexUnproc = 0;
+
+	    UartClass->IntClear(EKTM4C123GXL_UARTDBG_MODULE, FUART_INT_RECEIVE);
+	}
+	if (IntVal & FUART_INT_TRANSMIT)
+	{
+	    if (UartDbgTxBuf->IndexUnproc != UartDbgTxBuf->IndexProc)
+	    {
+	        UartClass->SendByte(EKTM4C123GXL_UARTDBG_MODULE, UartDbgTxBuf->data[UartDbgTxBuf->IndexProc++]);
+
+            if (UartDbgTxBuf->IndexProc >= UartDbgTxBuf->Length)
+                UartDbgTxBuf->IndexProc = 0;
+	    }
+	    else
+	    {
+            UartClass->IntStatus(EKTM4C123GXL_UARTDBG_MODULE, FUART_INT_TRANSMIT, EKTM4C123GXL_STATUS_OFF);
+	    }
+
+        UartClass->IntClear(EKTM4C123GXL_UARTDBG_MODULE, FUART_INT_TRANSMIT);
+	}
 }
 
 /*
- * Interrupt Service Routine for the UART Debug interface.
+ * Sends data over the specified UART interface.
  */
 
-void brd_UartDbgISR (void)
+uint8_t ektm4c123gxl_UART_SendString (uint8_t EKTM4C123GXL_UARTx, uint8_t* string)
 {
-	fUart_IRQHandler(UartDbg);
-}
+    uint8_t i = 1;
+    uint8_t result = EKTM4C123GXL_STATUS_OFF;
 
-/*
- * Sends data over the UART interface.
- */
-
-void brd_UartSend (uint8_t UARTx, const uint8_t* data)
-{
-    uint8_t length = 0;
-
-    switch (UARTx)
+    switch (EKTM4C123GXL_UARTx)
     {
-    case UARTDBG:
-        length = 0;
+    case EKTM4C123GXL_UART_DBG:
+        // Wait till previous transmission ends.
+        while (UartDbgTxBuf->IndexProc != UartDbgTxBuf->IndexUnproc);
 
-        while (*(data++))
-            length++;
-
-        fUart_BeginTransfer(UartDbg, data - length - 1, length);
-
-        break;
-    default:
+        while (string[i] != '\0')
+        {
+            UartDbgTxBuf->data[UartDbgTxBuf->IndexUnproc++] = string[i++];
 
 
+            if (UartDbgTxBuf->IndexUnproc >= UartDbgTxBuf->Length)
+                UartDbgTxBuf->IndexUnproc = 0;
+        }
+
+        UartClass->SendByte(EKTM4C123GXL_UARTDBG_MODULE, string[0]);
+        UartClass->IntStatus(EKTM4C123GXL_UARTDBG_MODULE, FUART_INT_TRANSMIT, EKTM4C123GXL_STATUS_ON);
+
+        result = EKTM4C123GXL_STATUS_ON;
         break;
     }
+
+    return result;
 }
 
 /*
  * Parses the data received on the specified UART interface.
  */
 
-void brd_UartParse (uint8_t UARTx)
+static void ektm4c123gxl_UART_Parse (uint8_t EKTM4C123GXL_UARTx)
 {
-    uint8_t RxBufIndex;
+    uint8_t RxBufIndexProc;
     uint8_t CmdIndex;
     uint8_t Cmd[20];
 
-    switch (UARTx)
+    switch (EKTM4C123GXL_UARTx)
     {
-    case UARTDBG:
-        RxBufIndex = UartDbg->RxBufProcIndex;
+    case EKTM4C123GXL_UART_DBG:
+        RxBufIndexProc = UartDbgRxBuf->IndexProc;
         CmdIndex = 0;
-        memset(Cmd, 0x00, sizeof(Cmd) * sizeof(uint8_t));
 
-        while (RxBufIndex != UartDbg->RxBufUnprocIndex)
+        while (RxBufIndexProc != UartDbgRxBuf->IndexUnproc)
         {
-            if (CmdIndex < sizeof(Cmd) / sizeof(uint8_t))
+            if (CmdIndex < (sizeof(Cmd) / sizeof(uint8_t)))
             {
-                *(Cmd + CmdIndex) = *(UartDbg->RxBuf + RxBufIndex++);
-                if (RxBufIndex >= UartDbg->RxBufLength)
-                    RxBufIndex = 0;
+                Cmd[CmdIndex] = UartDbgRxBuf->data[RxBufIndexProc++];
+                if (RxBufIndexProc >= UartDbgRxBuf->Length)
+                    RxBufIndexProc = 0;
 
-                if (*(Cmd + CmdIndex) == UARTDBG_CMD_DELIMITER)
+                if (Cmd[CmdIndex] == EKTM4C123GXL_UARTDBG_CMD_DELIMITER)
                 {
-                    if (!(strcmp((char*) Cmd, UARTDBG_CMD_HELLO)))
+                    if (memcmp(Cmd, EKTM4C123GXL_UARTDBG_CMD_HELLO, sizeof(EKTM4C123GXL_UARTDBG_CMD_HELLO) - 1) == 0)
                     {
-                        brd_UartSend(UARTDBG, UARTDBG_CMD_HEY);
+                        ektm4c123gxl_UART_SendString(EKTM4C123GXL_UART_DBG, EKTM4C123GXL_UARTDBG_CMD_HEY);
                     } else {
-                        brd_UartSend(UARTDBG, UARTDBG_CMD_UNKNOWN);
+                        ektm4c123gxl_UART_SendString(EKTM4C123GXL_UART_DBG, EKTM4C123GXL_UARTDBG_CMD_UNKNOWN);
                     }
 
-                    UartDbg->RxBufProcIndex = RxBufIndex;
+                    UartDbgRxBuf->IndexProc = RxBufIndexProc;
                     CmdIndex = 0;
-                    memset(Cmd, 0x00, sizeof(Cmd) * sizeof(uint8_t));
                 }
                 else
                 {
@@ -448,8 +498,6 @@ void brd_UartParse (uint8_t UARTx)
         }
 
         break;
-    default:
-
-        break;
     }
 }
+

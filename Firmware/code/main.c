@@ -76,10 +76,12 @@ int main (void)
 
     board->LED_Off(EKTM4C123GXL_LEDB | EKTM4C123GXL_LEDG | EKTM4C123GXL_LEDR);
 
-    brd_UartInit(UARTDBG);
+    board->UART_IntInit(EKTM4C123GXL_UART_DBG);
+
+    board->UART_SendString(EKTM4C123GXL_UART_DBG, "I'm here and I work properly.\r\n");
 
 	while (1)
 	{
-	    brd_UartParse(UARTDBG);
+	    board->UART_Parse(EKTM4C123GXL_UART_DBG);
 	}
 }

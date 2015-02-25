@@ -53,6 +53,7 @@ typedef struct
 	void (*Init) (fUart_InitStruct* InitStruct, fGpio_Class* GpioClass);
 	void (*SendByte) (uint32_t FUART_MODULEx, uint8_t byte);
 	void (*SendBytes) (uint32_t FUART_MODULEx, uint8_t* bytes, uint8_t length);
+	uint8_t (*ReadByte) (uint32_t FUART_MODULEx);
 
 	void (*IntInit) (fUart_InitStruct* InitStruct, fGpio_Class* GpioClass, uint32_t FUART_INTx, void (*UART_IRQ) (void));
 	uint8_t (*IntTest) (uint32_t FUART_MODULEx, uint32_t FUART_INTx, uint8_t OnlyMaskedInt);

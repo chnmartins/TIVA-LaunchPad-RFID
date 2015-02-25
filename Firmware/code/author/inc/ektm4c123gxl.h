@@ -38,6 +38,10 @@ typedef struct
     uint8_t (*PB_IntTest) (uint8_t EKTM4C123GXL_PBx);
     void (*PB_IntClear) (uint8_t EKTM4C123GXL_PBx);
     void (*PB_IntStatus) (uint8_t EKTM4C123GXL_PBx, uint8_t EKTM4C123GXL_STATUSx);
+
+    uint8_t (*UART_IntInit) (uint8_t EKTM4C123GXL_UARTx);
+    uint8_t (*UART_SendString) (uint8_t EKTM4C123GXL_UARTx, uint8_t* string);
+    void (*UART_Parse) (uint8_t EKTM4C123GXL_UARTx);
 } ektm4c123gxl_Class;
 
 /* Exported constants --------------------------------------------------------*/
