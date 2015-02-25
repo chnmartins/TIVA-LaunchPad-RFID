@@ -103,25 +103,20 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* Private function prototypes -----------------------------------------------*/
-
+static void fGpio_SysCtlStatus (uint32_t FGPIO_PORTx, bool status);
+static uint32_t fGpio_IntGetPin (uint32_t FGPIO_PINx);
+static void fGpio_UnlockPin (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx);
+static void fGpio_Config (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_CURRENTx, uint32_t FGPIO_TYPEx, uint32_t GPIO_DIR_MODEx);
+static void fGpio_IntConfig (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_INTTYPEx, void (*FGPIO_INTIRQ) (void));
+static void fGpio_OutputInteract (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint8_t FGPIO_OUTPUTx);
+static uint8_t fGpio_InputRead(uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx);
 static void fGpio_InitInput (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_TYPEx, uint32_t FGPIO_CURRENTx);
 static void fGpio_InitInputInt (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_TYPEx, uint32_t FGPIO_CURRENTx, uint32_t FGPIO_INTTYPEx, void (*FGPIO_INTIRQ) (void));
 static void fGpio_InitOutput(uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_TYPEx, uint32_t FGPIO_CURRENTx);
 static void fGpio_InitAlternateFunction(uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_TYPEx, uint32_t FGPIO_CURRENTx, uint32_t GPIO_AF);
-
-static uint32_t fGpio_IntGetPin (uint32_t FGPIO_PINx);
-static void fGpio_IntConfig (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_INTTYPEx, void (*FGPIO_INTIRQ) (void));
 static void fGpio_IntStatus (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint8_t FGPIO_INTx);
-static uint8_t fGpio_IntTest (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx);
 static void fGpio_IntClear (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx);
-static void fGpio_IntStatus (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint8_t FGPIO_INTx);
-
-static void fGpio_UnlockPin (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx);
-static void fGpio_Config (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_CURRENTx, uint32_t FGPIO_TYPEx, uint32_t GPIO_DIR_MODEx);
-static void fGpio_SysCtlStatus (uint32_t FGPIO_PORTx, bool status);
-
-static void fGpio_OutputInteract (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint8_t FGPIO_OUTPUTx);
-static uint8_t fGpio_InputRead(uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx);
+static uint8_t fGpio_IntTest (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -139,6 +134,11 @@ fGpio_Class* fGpio_CreateClass (void)
     temp->InitInput = fGpio_InitInput;
     temp->InitInputInt = fGpio_InitInputInt;
     temp->InitOutput = fGpio_InitOutput;
+    temp->OutputInteract = fGpio_OutputInteract;
+    temp->InputRead = fGpio_InputRead;
+    temp->IntClear = fGpio_IntClear;
+    temp->IntStatus = fGpio_IntStatus;
+    temp->IntTest = fGpio_IntTest;
 
     return temp;
 }
@@ -390,7 +390,7 @@ static void fGpio_InitInputInt (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint3
     fGpio_SysCtlStatus(FGPIO_PORTx, true);
     fGpio_UnlockPin(FGPIO_PINx, FGPIO_PORTx);
     fGpio_Config(FGPIO_PINx, FGPIO_PORTx, FGPIO_CURRENTx, FGPIO_TYPEx, GPIO_DIR_MODE_IN);
-    fGpio_ConfigInt(FGPIO_PINx, FGPIO_PORTx, FGPIO_INTTYPEx, FGPIO_INTIRQ);
+    fGpio_IntConfig(FGPIO_PINx, FGPIO_PORTx, FGPIO_INTTYPEx, FGPIO_INTIRQ);
 }
 
 /*
@@ -473,7 +473,7 @@ static uint8_t fGpio_IntTest (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx)
     ASSERT_PARAM(FGPIO_ASSERT_PORT(FGPIO_PORTx));
 #endif
 
-    if (GPIOIntStatus(FGPIO_PORTx, true) & FGPIO_PINx)
+    if (GPIOIntStatus(FGPIO_PORTx, true) & fGpio_IntGetPin(FGPIO_PINx))
         return FGPIO_INT_ON;
     else
         return FGPIO_INT_OFF;

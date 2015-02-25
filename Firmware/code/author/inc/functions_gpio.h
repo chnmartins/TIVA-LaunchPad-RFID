@@ -35,6 +35,12 @@ typedef struct
     void (*InitInputInt) (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_TYPEx, uint32_t FGPIO_CURRENTx, uint32_t FGPIO_INTTYPEx, void (*FGPIO_INTIRQ) (void));
     void (*InitAlternateFunction) (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint32_t FGPIO_TYPEx, uint32_t FGPIO_CURRENTx, uint32_t FGPIO_AF);
 
+    void (*OutputInteract) (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint8_t FGPIO_OUTPUTx);
+    uint8_t (*InputRead) (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx);
+
+    void (*IntClear) (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx);
+    void (*IntStatus) (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx, uint8_t FGPIO_INTx);
+    uint8_t (*IntTest) (uint32_t FGPIO_PINx, uint32_t FGPIO_PORTx);
 } fGpio_Class;
 
 /* Exported constants --------------------------------------------------------*/

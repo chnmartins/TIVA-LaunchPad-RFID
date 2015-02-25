@@ -18,6 +18,9 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
+#include <stdlib.h>
+#include <stddef.h>
+
 #include "ektm4c123gxl.h"
 #include "functions_gpio.h"
 #include "conf.h"
@@ -25,181 +28,211 @@
 /* Private typedef -----------------------------------------------------------*/
 
 /* Private define ------------------------------------------------------------*/
-#define LEDR_PIN     GPIO_PIN_1
-#define LEDR_PORT    GPIO_PORTF_BASE
-#define LEDB_PIN     GPIO_PIN_2
-#define LEDB_PORT    GPIO_PORTF_BASE
-#define LEDG_PIN     GPIO_PIN_3
-#define LEDG_PORT    GPIO_PORTF_BASE
+#define EKTM4C123GXL_LEDR_PIN     FGPIO_PIN_1
+#define EKTM4C123GXL_LEDR_PORT    FGPIO_PORT_F
+#define EKTM4C123GXL_LEDB_PIN     FGPIO_PIN_2
+#define EKTM4C123GXL_LEDB_PORT    FGPIO_PORT_F
+#define EKTM4C123GXL_LEDG_PIN     FGPIO_PIN_3
+#define EKTM4C123GXL_LEDG_PORT    FGPIO_PORT_F
 
-#define PB1_PIN      GPIO_PIN_4
-#define PB1_PORT     GPIO_PORTF_BASE
-#define PB2_PIN      GPIO_PIN_0
-#define PB2_PORT     GPIO_PORTF_BASE
+#define EKTM4C123GXL_PB1_PIN      FGPIO_PIN_4
+#define EKTM4C123GXL_PB1_PORT     FGPIO_PORT_F
+#define EKTM4C123GXL_PB2_PIN      FGPIO_PIN_0
+#define EKTM4C123GXL_PB2_PORT     FGPIO_PORT_F
 
 /* Private macro -------------------------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
-
+fGpio_Class* GpioClass;
 /* Private function prototypes -----------------------------------------------*/
+static void ektm4c123gxl_LED_Init (uint8_t LEDx);
+static void ektm4c123gxl_LED_On (uint8_t LEDx);
+static void ektm4c123gxl_LED_Off (uint8_t LEDx);
+static void ektm4c123gxl_LED_Toggle (uint8_t LEDx);
+
+static void ektm4c123gxl_PB_Init (uint8_t PBx);
+static uint8_t ektm4c123gxl_PB_Read (uint8_t EKTM4C123GXL_PBx);
+static void ektm4c123gxl_PB_IntInit (uint8_t PBx, void (*PB_INTIRQ) (void));
+static uint8_t ektm4c123gxl_PB_IntTest (uint8_t EKTM4C123GXL_PBx);
+static void ektm4c123gxl_PB_IntClear (uint8_t EKTM4C123GXL_PBx);
+static void ektm4c123gxl_PB_IntStatus (uint8_t EKTM4C123GXL_PBx, uint8_t EKTM4C123GXL_STATUSx);
 
 /* Private functions ---------------------------------------------------------*/
 
 /*
- * Initialize the LEDs.
+ *
  */
 
-void brd_LedInit (uint8_t LEDx)
+ektm4c123gxl_Class* ektm4c123gxl_CreateClass (void)
 {
-    fGpio_Pin temp = {.Current = CURR_2MA, .Direction = DIR_OUT, .Type = TYPE_PP_PU};
+    ektm4c123gxl_Class* temp = malloc(sizeof(ektm4c123gxl_Class));
+    if (temp == NULL)
+        return NULL;
 
-    if (LEDx & LEDR)
-    {
-        temp.Pin = LEDR_PIN, temp.Port = LEDR_PORT;
-        fGpio_Init(&temp);
-    }
-    if (LEDx & LEDG)
-    {
-        temp.Pin = LEDG_PIN, temp.Port = LEDG_PORT;
-        fGpio_Init(&temp);
-    }
-    if (LEDx & LEDB)
-    {
-        temp.Pin = LEDB_PIN, temp.Port = LEDB_PORT;
-        fGpio_Init(&temp);
-    }
+    GpioClass = fGpio_CreateClass();
+    if (GpioClass == NULL)
+        return NULL;
+
+    temp->LED_Init = ektm4c123gxl_LED_Init;
+    temp->LED_Off = ektm4c123gxl_LED_Off;
+    temp->LED_On = ektm4c123gxl_LED_On;
+    temp->LED_Toggle = ektm4c123gxl_LED_Toggle;
+
+    temp->PB_Init = ektm4c123gxl_PB_Init;
+    temp->PB_Read = ektm4c123gxl_PB_Read;
+    temp->PB_IntInit = ektm4c123gxl_PB_IntInit;
+    temp->PB_IntStatus = ektm4c123gxl_PB_IntStatus;
+    temp->PB_IntClear = ektm4c123gxl_PB_IntClear;
+    temp->PB_IntTest = ektm4c123gxl_PB_IntTest;
+
+    return temp;
 }
 
 /*
- * Interact with the LEDs.
+ *
  */
 
-void brd_LedInteract (uint8_t LEDx, uint8_t LED_x)
+void ektm4c123gxl_DestroyClass (ektm4c123gxl_Class* class)
 {
-    fGpio_Pin temp;
-    void (*fnPtr) (fGpio_Pin* const);
-
-    switch (LED_x)
-    {
-    case LED_ON:
-        fnPtr = fGpio_setHigh;
-        break;
-    case LED_OFF:
-        fnPtr = fGpio_setLow;
-        break;
-    case LED_TOGGLE:
-        fnPtr = fGpio_setToggle;
-        break;
-    }
-
-    if (LEDx & LEDR)
-    {
-        temp.Pin = LEDR_PIN, temp.Port = LEDR_PORT;
-        fnPtr(&temp);
-    }
-    if (LEDx & LEDG)
-    {
-        temp.Pin = LEDG_PIN, temp.Port = LEDG_PORT;
-        fnPtr(&temp);
-    }
-    if (LEDx & LEDB)
-    {
-        temp.Pin = LEDB_PIN, temp.Port = LEDB_PORT;
-        fnPtr(&temp);
-    }
+    free(class);
 }
 
 /*
- * Initialize the pushbuttons.
+ * Wrapper functions LEDs.
  */
 
-void brd_PushButtonInit (uint8_t PBx)
+static void ektm4c123gxl_LED_Init (uint8_t EKTM4C123GXL_LEDx)
 {
-    fGpio_Pin temp = {.Current = CURR_2MA, .Direction = DIR_IN, .Type = TYPE_PP_PU};
-
-    if (PBx & PB1)
-    {
-        temp.Pin = PB1_PIN, temp.Port = PB1_PORT;
-        fGpio_Init(&temp);
-    }
-    if (PBx & PB2)
-    {
-        temp.Pin = PB2_PIN, temp.Port = PB2_PORT;
-        fGpio_Init(&temp);
-    }
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDR)
+        GpioClass->InitOutput(EKTM4C123GXL_LEDR_PIN, EKTM4C123GXL_LEDR_PORT, FGPIO_TYPE_PUSH_PULL_PULLDOWN, FGPIO_CURRENT_2MA);
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDB)
+        GpioClass->InitOutput(EKTM4C123GXL_LEDB_PIN, EKTM4C123GXL_LEDB_PORT, FGPIO_TYPE_PUSH_PULL_PULLDOWN, FGPIO_CURRENT_2MA);
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDG)
+        GpioClass->InitOutput(EKTM4C123GXL_LEDG_PIN, EKTM4C123GXL_LEDG_PORT, FGPIO_TYPE_PUSH_PULL_PULLDOWN, FGPIO_CURRENT_2MA);
 }
 
 /*
- * Read the pushbuttons.
+ * Wrapper functions LEDs.
  */
 
-uint8_t brd_PushButtonRead (uint8_t PBx)
+static void ektm4c123gxl_LED_On (uint8_t EKTM4C123GXL_LEDx)
 {
-    fGpio_Pin temp;
-    uint8_t val = 0;
-
-    if (PBx & PB1)
-    {
-        temp.Pin = PB1_PIN, temp.Port = PB1_PORT;
-        val |= fGpio_getLevel(&temp) ? PB1 : 0;
-    }
-    if (PBx & PB2)
-    {
-        temp.Pin = PB2_PIN, temp.Port = PB2_PORT;
-        val |= fGpio_getLevel(&temp) ? PB2 : 0;
-    }
-
-    return ~val;
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDR)
+        GpioClass->OutputInteract(EKTM4C123GXL_LEDR_PIN, EKTM4C123GXL_LEDR_PORT, FGPIO_OUTPUT_HIGH);
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDB)
+        GpioClass->OutputInteract(EKTM4C123GXL_LEDB_PIN, EKTM4C123GXL_LEDB_PORT, FGPIO_OUTPUT_HIGH);
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDG)
+        GpioClass->OutputInteract(EKTM4C123GXL_LEDG_PIN, EKTM4C123GXL_LEDG_PORT, FGPIO_OUTPUT_HIGH);
 }
 
 /*
- * Sets the external interrupts on the pushbuttons.
+ * Wrapper functions LEDs.
  */
 
-void brd_PushButtonInitInt (uint8_t PBx, void (*IntIRQ) (void))
+static void ektm4c123gxl_LED_Off (uint8_t EKTM4C123GXL_LEDx)
 {
-    fGpio_Pin temp = {.IntType = INTTYPE_FALLING_EDGE, .IntIRQ = IntIRQ};
-
-    if (PBx & PB1)
-    {
-        temp.Pin = PB1_PIN, temp.Port = PB1_PORT;
-        fGpio_IntInit(&temp);
-    }
-    if (PBx & PB2)
-    {
-        temp.Pin = PB2_PIN, temp.Port = PB2_PORT;
-        fGpio_IntInit(&temp);
-    }
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDR)
+        GpioClass->OutputInteract(EKTM4C123GXL_LEDR_PIN, EKTM4C123GXL_LEDR_PORT, FGPIO_OUTPUT_LOW);
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDB)
+        GpioClass->OutputInteract(EKTM4C123GXL_LEDB_PIN, EKTM4C123GXL_LEDB_PORT, FGPIO_OUTPUT_LOW);
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDG)
+        GpioClass->OutputInteract(EKTM4C123GXL_LEDG_PIN, EKTM4C123GXL_LEDG_PORT, FGPIO_OUTPUT_LOW);
 }
 
 /*
- * Gets the status of the interrupt and clears it if active.
+ * Wrapper functions LEDs.
  */
 
-uint8_t brd_PushButtonGetInt (uint8_t PBx)
+static void ektm4c123gxl_LED_Toggle (uint8_t EKTM4C123GXL_LEDx)
 {
-    fGpio_Pin temp;
-    uint8_t val = 0;
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDR)
+        GpioClass->OutputInteract(EKTM4C123GXL_LEDR_PIN, EKTM4C123GXL_LEDR_PORT, FGPIO_OUTPUT_TOGGLE);
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDB)
+        GpioClass->OutputInteract(EKTM4C123GXL_LEDB_PIN, EKTM4C123GXL_LEDB_PORT, FGPIO_OUTPUT_TOGGLE);
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDG)
+        GpioClass->OutputInteract(EKTM4C123GXL_LEDG_PIN, EKTM4C123GXL_LEDG_PORT, FGPIO_OUTPUT_TOGGLE);
+}
 
-    if (PBx & PB1)
+/*
+ * Wrapper functions PBs.
+ */
+
+static void ektm4c123gxl_PB_Init (uint8_t EKTM4C123GXL_PBx)
+{
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB1)
+        GpioClass->InitInput(EKTM4C123GXL_PB1_PIN, EKTM4C123GXL_PB1_PORT, FGPIO_TYPE_PUSH_PULL_PULLUP, FGPIO_CURRENT_2MA);
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB2)
+        GpioClass->InitInput(EKTM4C123GXL_PB2_PIN, EKTM4C123GXL_PB2_PORT, FGPIO_TYPE_PUSH_PULL_PULLUP, FGPIO_CURRENT_2MA);
+}
+
+/*
+ * Wrapper functions PBs.
+ */
+
+static uint8_t ektm4c123gxl_PB_Read (uint8_t EKTM4C123GXL_PBx)
+{
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB1)
     {
-        temp.Pin = PB1_PIN, temp.Port = PB1_PORT;
-        if (fGpio_IntGet(&temp) & temp.Pin)
-        {
-            val |= PB1;
-            fGpio_IntClear(&temp);
-        }
+        if (GpioClass->InputRead(EKTM4C123GXL_PB1_PIN, EKTM4C123GXL_PB1_PORT) == FGPIO_INPUT_HIGH)
+            return EKTM4C123GXL_STATUS_OFF;
+    }
+    else if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB2)
+    {
+        if (GpioClass->InputRead(EKTM4C123GXL_PB2_PIN, EKTM4C123GXL_PB2_PORT) == FGPIO_INPUT_HIGH)
+            return EKTM4C123GXL_STATUS_OFF;
     }
 
-    if (PBx & PB2)
-    {
-        temp.Pin = PB2_PIN, temp.Port = PB2_PORT;
-        if (fGpio_IntGet(&temp) & temp.Pin)
-        {
-            val |= PB2;
-            fGpio_IntClear(&temp);
-        }
-    }
+    return EKTM4C123GXL_STATUS_ON;
+}
 
-    return val;
+/*
+ * Wrapper functions PBs.
+ */
+
+static void ektm4c123gxl_PB_IntInit (uint8_t EKTM4C123GXL_PBx, void (*EKTM4C123GXL_PB_INTIRQ) (void))
+{
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB1)
+        GpioClass->InitInputInt(EKTM4C123GXL_PB1_PIN, EKTM4C123GXL_PB1_PORT, FGPIO_TYPE_PUSH_PULL_PULLUP, FGPIO_CURRENT_2MA, FGPIO_INTTYPE_FALLING_EDGE, EKTM4C123GXL_PB_INTIRQ);
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB2)
+        GpioClass->InitInputInt(EKTM4C123GXL_PB2_PIN, EKTM4C123GXL_PB2_PORT, FGPIO_TYPE_PUSH_PULL_PULLUP, FGPIO_CURRENT_2MA, FGPIO_INTTYPE_FALLING_EDGE, EKTM4C123GXL_PB_INTIRQ);
+}
+
+/*
+ * Wrapper functions PBs.
+ */
+
+static uint8_t ektm4c123gxl_PB_IntTest (uint8_t EKTM4C123GXL_PBx)
+{
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB1)
+        if (GpioClass->IntTest(EKTM4C123GXL_PB1_PIN, EKTM4C123GXL_PB1_PORT) == FGPIO_INT_ON)
+            return EKTM4C123GXL_STATUS_ON;
+    else if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB2)
+        if (GpioClass->IntTest(EKTM4C123GXL_PB2_PIN, EKTM4C123GXL_PB2_PORT) == FGPIO_INT_ON)
+            return EKTM4C123GXL_STATUS_ON;
+
+    return EKTM4C123GXL_STATUS_OFF;
+}
+
+/*
+ * Wrapper functions PBs.
+ */
+
+static void ektm4c123gxl_PB_IntClear (uint8_t EKTM4C123GXL_PBx)
+{
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB1)
+        GpioClass->IntClear(EKTM4C123GXL_PB1_PIN, EKTM4C123GXL_PB1_PORT);
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB2)
+        GpioClass->IntClear(EKTM4C123GXL_PB2_PIN, EKTM4C123GXL_PB2_PORT);
+}
+
+/*
+ * Wrapper functions PBs.
+ */
+
+static void ektm4c123gxl_PB_IntStatus (uint8_t EKTM4C123GXL_PBx, uint8_t EKTM4C123GXL_STATUSx)
+{
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB1)
+        (EKTM4C123GXL_STATUSx == EKTM4C123GXL_STATUS_ON) ?  GpioClass->IntStatus(EKTM4C123GXL_PB1_PIN, EKTM4C123GXL_PB1_PORT, FGPIO_INT_ON) :  GpioClass->IntStatus(EKTM4C123GXL_PB1_PIN, EKTM4C123GXL_PB1_PORT, FGPIO_INT_OFF);
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB2)
+        (EKTM4C123GXL_STATUSx == EKTM4C123GXL_STATUS_ON) ?  GpioClass->IntStatus(EKTM4C123GXL_PB2_PIN, EKTM4C123GXL_PB2_PORT, FGPIO_INT_ON) :  GpioClass->IntStatus(EKTM4C123GXL_PB2_PIN, EKTM4C123GXL_PB2_PORT, FGPIO_INT_OFF);
 }
