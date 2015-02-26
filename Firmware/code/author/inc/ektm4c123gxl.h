@@ -44,20 +44,24 @@ typedef struct
     void (*UART_Parse) (uint8_t EKTM4C123GXL_UARTx);
 
     void (*Delay) (double sTime);
+
+    uint8_t (*SPI_Init) (uint8_t EKTM4C123GXL_SPIx);
 } ektm4c123gxl_Class;
 
 /* Exported constants --------------------------------------------------------*/
-#define EKTM4C123GXL_LEDR        (0x01)
-#define EKTM4C123GXL_LEDB        (0x02)
-#define EKTM4C123GXL_LEDG        (0x04)
+#define EKTM4C123GXL_LEDR        	(0x01)
+#define EKTM4C123GXL_LEDB        	(0x02)
+#define EKTM4C123GXL_LEDG        	(0x04)
 
-#define EKTM4C123GXL_PB1         (0x01)
-#define EKTM4C123GXL_PB2         (0x02)
+#define EKTM4C123GXL_PB1         	(0x01)
+#define EKTM4C123GXL_PB2         	(0x02)
 
-#define EKTM4C123GXL_UART_DBG 0x01
+#define EKTM4C123GXL_UART_DBG 		(0x01)
 
-#define EKTM4C123GXL_STATUS_ON   (0x01)
-#define EKTM4C123GXL_STATUS_OFF  (0x00)
+#define EKTM4C123GXL_SPI_RFID		(0x01)
+
+#define EKTM4C123GXL_STATUS_ON   	(0x01)
+#define EKTM4C123GXL_STATUS_OFF  	(0x00)
 
 /* Exported macro ------------------------------------------------------------*/
 

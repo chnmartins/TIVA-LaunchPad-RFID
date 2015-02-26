@@ -47,21 +47,6 @@ void assert_failed (char* file, uint32_t line)
     }
 }
 
-void PB_IRQ (void)
-{
-    if (board->PB_IntTest(EKTM4C123GXL_PB1) == EKTM4C123GXL_STATUS_ON)
-    {
-        board->LED_Toggle(EKTM4C123GXL_LEDB);
-        board->PB_IntClear(EKTM4C123GXL_PB1);
-    }
-
-    if (board->PB_IntTest(EKTM4C123GXL_PB2) == EKTM4C123GXL_STATUS_ON)
-    {
-        board->LED_Toggle(EKTM4C123GXL_LEDG);
-        board->PB_IntClear(EKTM4C123GXL_PB2);
-    }
-}
-
 /*
  * Main function.
  */
@@ -71,19 +56,32 @@ int main (void)
     board = ektm4c123gxl_CreateClass();
 
     board->LED_Init(EKTM4C123GXL_LEDB | EKTM4C123GXL_LEDG | EKTM4C123GXL_LEDR);
-    board->PB_IntInit(EKTM4C123GXL_PB1 | EKTM4C123GXL_PB2, PB_IRQ);
-    board->PB_IntStatus(EKTM4C123GXL_PB1 | EKTM4C123GXL_PB2, EKTM4C123GXL_STATUS_ON);
+    board->PB_Init(EKTM4C123GXL_PB1 | EKTM4C123GXL_PB2);
+    board->UART_IntInit(EKTM4C123GXL_UART_DBG);
 
     board->LED_Off(EKTM4C123GXL_LEDB | EKTM4C123GXL_LEDG | EKTM4C123GXL_LEDR);
 
-    board->UART_IntInit(EKTM4C123GXL_UART_DBG);
+    board->Delay(0.2);
+    board->LED_Toggle(EKTM4C123GXL_LEDR);
+    board->Delay(0.2);
+    board->LED_Toggle(EKTM4C123GXL_LEDB);
+    board->Delay(0.2);
+    board->LED_Toggle(EKTM4C123GXL_LEDG);
+    board->Delay(0.2);
+    board->LED_Toggle(EKTM4C123GXL_LEDR);
+    board->Delay(0.2);
+    board->LED_Toggle(EKTM4C123GXL_LEDB);
+    board->Delay(0.2);
+    board->LED_Toggle(EKTM4C123GXL_LEDG);
 
     board->UART_SendString(EKTM4C123GXL_UART_DBG, "I'm here and I work properly.\r\n");
 
 	while (1)
 	{
 	    board->UART_Parse(EKTM4C123GXL_UART_DBG);
-	    board->Delay(2);
-	    board->LED_Toggle(EKTM4C123GXL_LEDB);
+	    if (board->PB_Read(EKTM4C123GXL_PB1) == EKTM4C123GXL_STATUS_ON)
+	    	board->LED_On(EKTM4C123GXL_LEDR);
+	    else
+	    	board->LED_Off(EKTM4C123GXL_LEDR);
 	}
 }

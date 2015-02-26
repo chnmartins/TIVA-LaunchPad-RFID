@@ -82,6 +82,49 @@ typedef struct
 #define EKTM4C123GXL_UARTDBG_CMD_HEY         "Yes, I'm here.\r\n"
 #define EKTM4C123GXL_UARTDBG_CMD_UNKNOWN     "I have no idea what you are talking about.\r\n"
 
+/******** SPI RFID */
+
+#define EKTM4C123GXL_SPIRFID_MODULE				FSPI_MODULE_0
+#define EKTM4C123GXL_SPIRFID_PROTOCOL			FSPI_PROTOCOL_POL0_PHA0
+#define EKTM4C123GXL_SPIRFID_CLOCK_SOURCE		FSPI_CLOCK_SOURCE_SYSTEM
+#define EKTM4C123GXL_SPIRFID_DATA_WIDTH			(16)
+#define EKTM4C123GXL_SPIRFID_MODE				FSPI_MODE_MASTER
+#define EKTM4C123GXL_SPIRFID_BITRATE			(50000)
+
+#define EKTM4C123GXL_SPIRFID_MISO_PIN        	FGPIO_PIN_4
+#define EKTM4C123GXL_SPIRFID_MISO_PORT       	FGPIO_PORT_A
+#define	EKTM4C123GXL_SPIRFID_MISO_TYPE			FGPIO_TYPE_PUSH_PULL_PULLDOWN
+#define EKTM4C123GXL_SPIRFID_MISO_CURRENT		FGPIO_CURRENT_2MA
+#define EKTM4C123GXL_SPIRFID_MISO_AF         	GPIO_PA4_SSI0RX
+
+#define EKTM4C123GXL_SPIRFID_MOSI_PIN       	FGPIO_PIN_5
+#define EKTM4C123GXL_SPIRFID_MOSI_PORT       	FGPIO_PORT_A
+#define	EKTM4C123GXL_SPIRFID_MOSI_TYPE			FGPIO_TYPE_PUSH_PULL_PULLDOWN
+#define EKTM4C123GXL_SPIRFID_MOSI_CURRENT		FGPIO_CURRENT_2MA
+#define EKTM4C123GXL_SPIRFID_MOSI_AF         	GPIO_PA5_SSI0TX
+
+#define EKTM4C123GXL_SPIRFID_NSS_PIN         	FGPIO_PIN_3
+#define EKTM4C123GXL_SPIRFID_NSS_PORT        	FGPIO_PORT_A
+#define	EKTM4C123GXL_SPIRFID_NSS_TYPE			FGPIO_TYPE_PUSH_PULL_PULLUP
+#define EKTM4C123GXL_SPIRFID_NSS_CURRENT		FGPIO_CURRENT_2MA
+#define EKTM4C123GXL_SPIRFID_NSS_AF          	GPIO_PA3_SSI0FSS
+
+#define EKTM4C123GXL_SPIRFID_CLK_PIN         	FGPIO_PIN_2
+#define EKTM4C123GXL_SPIRFID_CLK_PORT        	FGPIO_PORT_A
+#define	EKTM4C123GXL_SPIRFID_CLK_TYPE			FGPIO_TYPE_PUSH_PULL_PULLDOWN
+#define EKTM4C123GXL_SPIRFID_CLK_CURRENT		FGPIO_CURRENT_2MA
+#define EKTM4C123GXL_SPIRFID_CLK_AF          	GPIO_PA2_SSI0CLK
+
+#define EKTM4C123GXL_SPIRFID_RST_PIN         	FGPIO_PIN_2
+#define EKTM4C123GXL_SPIRFID_RST_PORT        	FGPIO_PORT_E
+#define	EKTM4C123GXL_SPIRFID_RST_TYPE			FGPIO_TYPE_PUSH_PULL_PULLUP
+#define EKTM4C123GXL_SPIRFID_RST_CURRENT		FGPIO_CURRENT_2MA
+
+#define EKTM4C123GXL_SPIRFID_IRQ_PIN         	FGPIO_PIN_3
+#define EKTM4C123GXL_SPIRFID_IRQ_PORT        	FGPIO_PORT_E
+#define	EKTM4C123GXL_SPIRFID_IRQ_TYPE			FGPIO_TYPE_PUSH_PULL_PULLDOWN
+#define EKTM4C123GXL_SPIRFID_IRQ_CURRENT		FGPIO_CURRENT_2MA
+
 /* Private macro -------------------------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
@@ -90,6 +133,7 @@ fUart_Class* UartClass;
 ektm4c123gxl_CircularBuffer* UartDbgTxBuf;
 ektm4c123gxl_CircularBuffer* UartDbgRxBuf;
 fTim_Class* TimerClass;
+fSpi_Class*	SpiClass;
 
 /* Private function prototypes -----------------------------------------------*/
 static void ektm4c123gxl_LED_Init (uint8_t LEDx);
@@ -111,6 +155,8 @@ static void ektm4c123gxl_UartDbg_Irq (void);
 
 static void ektm4c123gxl_Delay (double sTime);
 
+static uint8_t ektm4c123gxl_SPI_Init (uint8_t EKTM4C123GXL_SPIx);
+
 /* Private functions ---------------------------------------------------------*/
 
 /*
@@ -121,19 +167,42 @@ ektm4c123gxl_Class* ektm4c123gxl_CreateClass (void)
 {
     ektm4c123gxl_Class* temp = malloc(sizeof(ektm4c123gxl_Class));
     if (temp == NULL)
-        return NULL;
+    	return NULL;
 
     GpioClass = fGpio_CreateClass();
     if (GpioClass == NULL)
-        return NULL;
+    {
+    	free(temp);
+    	return NULL;
+    }
 
     UartClass = fUart_CreateClass();
     if (UartClass == NULL)
+    {
+    	free(GpioClass);
+    	free(temp);
     	return NULL;
+    }
 
     TimerClass = fTim_CreateClass();
     if (TimerClass == NULL)
-        return NULL;
+    {
+    	free(UartClass);
+    	free(GpioClass);
+    	free(temp);
+    	return NULL;
+    }
+
+    SpiClass = fSpi_CreateClass();
+    if (SpiClass == NULL)
+    {
+    	free(TimerClass);
+    	free(UartClass);
+    	free(GpioClass);
+    	free(temp);
+    	return NULL;
+    }
+
 
     temp->LED_Init = ektm4c123gxl_LED_Init;
     temp->LED_Off = ektm4c123gxl_LED_Off;
@@ -152,6 +221,8 @@ ektm4c123gxl_Class* ektm4c123gxl_CreateClass (void)
     temp->UART_Parse = ektm4c123gxl_UART_Parse;
 
     temp->Delay = ektm4c123gxl_Delay;
+
+    temp->SPI_Init = ektm4c123gxl_SPI_Init;
 
     return temp;
 }
@@ -529,73 +600,57 @@ static void ektm4c123gxl_Delay (double sTime)
  * Initialize the RFID interface.
  */
 
-bool brd_RfidInit (void)
+static uint8_t ektm4c123gxl_SPI_Init (uint8_t EKTM4C123GXL_SPIx)
 {
-    uint8_t i;
+    fSpi_Struct* InitStruct;
+    uint8_t result = EKTM4C123GXL_STATUS_OFF;
 
-    SpiRfid = (fSpi_Mod*) calloc(1, sizeof(fSpi_Mod));
-    if (SpiRfid == (fSpi_Mod*) NULL)
-        return false;
-
-    SpiRfid->nPins = 4;
-    SpiRfid->Pins = (fGpio_Pin**) calloc(SpiRfid->nPins, sizeof(fGpio_Pin*));
-    if (SpiRfid->Pins == (fGpio_Pin**) NULL)
-        return false;
-
-    for (i = 0; i < SpiRfid->nPins; i++)
+    switch (EKTM4C123GXL_SPIx)
     {
-        (*(SpiRfid->Pins + i)) = (fGpio_Pin*) calloc(1, sizeof(fGpio_Pin));
-        if ((*(SpiRfid->Pins + i)) == (fGpio_Pin*) NULL)
-            return false;
-        (*(SpiRfid->Pins + i))->Direction = DIR_HW;
-        (*(SpiRfid->Pins + i))->Current = CURR_2MA;
+    case EKTM4C123GXL_SPI_RFID:
+    	InitStruct = fSpi_CreateInitStruct(4);
+    	if (InitStruct == NULL)
+    		return result;
+
+    	InitStruct->Module = EKTM4C123GXL_SPIRFID_MODULE;
+    	InitStruct->Mode = EKTM4C123GXL_SPIRFID_MODE;
+    	InitStruct->Protocol = EKTM4C123GXL_SPIRFID_PROTOCOL;
+    	InitStruct->DataWidth = EKTM4C123GXL_SPIRFID_DATA_WIDTH;
+    	InitStruct->ClockSource = EKTM4C123GXL_SPIRFID_CLOCK_SOURCE;
+    	InitStruct->BitRate = EKTM4C123GXL_SPIRFID_BITRATE;
+
+    	InitStruct->GpioPin[0] = EKTM4C123GXL_SPIRFID_MISO_PIN;
+    	InitStruct->GpioPort[0] = EKTM4C123GXL_SPIRFID_MISO_PORT;
+    	InitStruct->GpioCurrent[0] = EKTM4C123GXL_SPIRFID_MISO_CURRENT;
+    	InitStruct->GpioType[0] = EKTM4C123GXL_SPIRFID_MISO_TYPE;
+    	InitStruct->GpioAlternateFunction[0] = EKTM4C123GXL_SPIRFID_MISO_AF;
+
+    	InitStruct->GpioPin[1] = EKTM4C123GXL_SPIRFID_MOSI_PIN;
+    	InitStruct->GpioPort[1] = EKTM4C123GXL_SPIRFID_MOSI_PORT;
+    	InitStruct->GpioCurrent[1] = EKTM4C123GXL_SPIRFID_MOSI_CURRENT;
+    	InitStruct->GpioType[1] = EKTM4C123GXL_SPIRFID_MOSI_TYPE;
+    	InitStruct->GpioAlternateFunction[1] = EKTM4C123GXL_SPIRFID_MOSI_AF;
+
+    	InitStruct->GpioPin[2] = EKTM4C123GXL_SPIRFID_NSS_PIN;
+    	InitStruct->GpioPort[2] = EKTM4C123GXL_SPIRFID_NSS_PORT;
+    	InitStruct->GpioCurrent[2] = EKTM4C123GXL_SPIRFID_NSS_CURRENT;
+    	InitStruct->GpioType[2] = EKTM4C123GXL_SPIRFID_NSS_TYPE;
+    	InitStruct->GpioAlternateFunction[2] = EKTM4C123GXL_SPIRFID_NSS_AF;
+
+    	InitStruct->GpioPin[3] = EKTM4C123GXL_SPIRFID_CLK_PIN;
+    	InitStruct->GpioPort[3] = EKTM4C123GXL_SPIRFID_CLK_PORT;
+    	InitStruct->GpioCurrent[3] = EKTM4C123GXL_SPIRFID_CLK_CURRENT;
+    	InitStruct->GpioType[3] = EKTM4C123GXL_SPIRFID_CLK_TYPE;
+    	InitStruct->GpioAlternateFunction[3] = EKTM4C123GXL_SPIRFID_CLK_AF;
+
+    	SpiClass->Init(InitStruct, GpioClass);
+
+		fSpi_DestroyInitStruct(InitStruct);
+
+    	result = EKTM4C123GXL_STATUS_ON;
+
+    	break;
     }
 
-    (*(SpiRfid->Pins + 0))->Pin = SPIRFID_MISO_PIN;
-    (*(SpiRfid->Pins + 0))->Port = SPIRFID_MISO_PORT;
-    (*(SpiRfid->Pins + 0))->AlternateFunction = SPIRFID_MISO_AF;
-    (*(SpiRfid->Pins + 0))->Type = TYPE_PP_PD;
-
-    (*(SpiRfid->Pins + 1))->Pin = SPIRFID_MOSI_PIN;
-    (*(SpiRfid->Pins + 1))->Port = SPIRFID_MOSI_PORT;
-    (*(SpiRfid->Pins + 1))->AlternateFunction = SPIRFID_MOSI_AF;
-    (*(SpiRfid->Pins + 1))->Type = TYPE_PP_PD;
-
-    (*(SpiRfid->Pins + 2))->Pin = SPIRFID_CLK_PIN;
-    (*(SpiRfid->Pins + 2))->Port = SPIRFID_CLK_PORT;
-    (*(SpiRfid->Pins + 2))->AlternateFunction = SPIRFID_CLK_AF;
-    (*(SpiRfid->Pins + 2))->Type = TYPE_PP_PD;
-
-    (*(SpiRfid->Pins + 3))->Pin = SPIRFID_NSS_PIN;
-    (*(SpiRfid->Pins + 3))->Port = SPIRFID_NSS_PORT;
-    (*(SpiRfid->Pins + 3))->AlternateFunction = SPIRFID_NSS_AF;
-    (*(SpiRfid->Pins + 3))->Type = TYPE_PP_PU;
-
-    SpiRfid->ClockSource = FSPI_CLK_SYSTEM;
-    SpiRfid->DataWidth = 8;
-    SpiRfid->Mode = MODE_MASTER;
-    SpiRfid->BitRate = 100000;
-    SpiRfid->Module = SPI_MOD0;
-    SpiRfid->Protocol = PROT_POL0_PHA0;
-    SpiRfid->Int = INT_NONE;
-
-    RstRfid = calloc(1, sizeof(fGpio_Pin));
-    if (RstRfid == NULL)
-        return 1;
-
-    RstRfid->Pin = SPIRFID_RST_PIN;
-    RstRfid->Port = SPIRFID_RST_PORT;
-    RstRfid->Current = CURR_2MA;
-    RstRfid->Direction = DIR_OUT;
-    RstRfid->Type = TYPE_PP_PU;
-    fGpio_Init(RstRfid);
-
-    for (i = 0; i < SpiRfid->nPins; i++)
-    {
-        free(*(SpiRfid->Pins + i));
-    }
-
-    free(SpiRfid->Pins);
-
-    return true;
+    return result;
 }
