@@ -23,6 +23,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
+#include "mfrc522.h"
 
 /* Exported types ------------------------------------------------------------*/
 typedef struct
@@ -46,6 +47,8 @@ typedef struct
     void (*Delay) (double sTime);
 
     uint8_t (*SPI_Init) (uint8_t EKTM4C123GXL_SPIx);
+
+    mfrc522_Class* mfrc522Class;
 } ektm4c123gxl_Class;
 
 /* Exported constants --------------------------------------------------------*/

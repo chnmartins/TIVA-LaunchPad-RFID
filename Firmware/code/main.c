@@ -74,6 +74,9 @@ int main (void)
     board->Delay(0.2);
     board->LED_Toggle(EKTM4C123GXL_LEDG);
 
+    board->mfrc522Class->Init(board->mfrc522Class);
+    board->mfrc522Class->SelfTest(board->mfrc522Class);
+
     board->UART_SendString(EKTM4C123GXL_UART_DBG, "I'm here and I work properly.\r\n");
 
 	while (1)

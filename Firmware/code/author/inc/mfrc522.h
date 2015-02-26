@@ -24,62 +24,26 @@
 /* Includes ------------------------------------------------------------------*/
 
 /* Exported types ------------------------------------------------------------*/
- typedef struct
- {
-     void (*Delay) (double seconds);
-     bool (*HwInit) (void);
-     void (*RstCtrl) (uint8_t status);
-     void (*ReadAddress) (uint8_t address, uint8_t* value);
-     void (*WriteAddress) (uint8_t address, uint8_t value);
- } mfrc522_Mod;
+typedef struct mfrc522_Class
+{
+     void (*__Delay) (double seconds);
+     uint8_t (*__HwInit) (void);
+     void (*__ResetControl) (uint8_t status);
+     void (*__ReadRegister) (uint8_t address, uint8_t* value);
+     void (*__WriteRegister) (uint8_t address, uint8_t value);
 
- typedef enum
- {
-     mfrc522_ok,
-     mfrc522_error,
-     mfrc522_nomem,
-     mfrc522_V1,
-     mfrc522_V2,
- } mfrc522_result;
+     uint8_t (*Init) (struct mfrc522_Class* Class);
+     uint8_t (*SelfTest) (struct mfrc522_Class* Class);
+} mfrc522_Class;
 
 /* Exported constants --------------------------------------------------------*/
-
+#define MFRC522_STATUS_ON           (0x01)
+#define MFRC522_STATUS_OFF          (0x00)
 /* Exported macro ------------------------------------------------------------*/
 
 /* Exported functions --------------------------------------------------------*/
-mfrc522_result mfrc522_Init (mfrc522_Mod* Dev);
-void mfrc522_HardReset (mfrc522_Mod* Dev);
-void mfrc522_ReadAddress (mfrc522_Mod* Dev, uint8_t address, uint8_t* value);
-void mfrc522_WriteAddress (mfrc522_Mod* Dev, uint8_t address, uint8_t value);
-void mfrc522_SoftReset (mfrc522_Mod* Dev);
-mfrc522_result mfrc522_SelfTest (mfrc522_Mod* Dev);
-void mfrc522_IBWrite (mfrc522_Mod* Dev, uint8_t* buffer);
-void mfrc522_IBRead (mfrc522_Mod* Dev, uint8_t* buffer);
-void mfrc522_Initialization (mfrc522_Mod* Dev);
-
-void mfrc522_TimerConfigure (mfrc522_Mod* Dev, uint16_t options);
-void mfrc522_TimerSetParams (mfrc522_Mod* Dev, uint16_t prescaler, uint16_t reloadval);
-uint16_t mfrc522_TimerGetValue (mfrc522_Mod* Dev);
-bool mfrc522_TimerIsFinished (mfrc522_Mod* Dev);
-bool mfrc522_TimerIsRunning (mfrc522_Mod* Dev);
-void mfrc522_TimerStart (mfrc522_Mod* Dev);
-void mfrc522_TimerStop (mfrc522_Mod* Dev);
-
-void mfrc522_TransmitterSetBits (mfrc522_Mod* Dev, uint8_t nBits);
-void mfrc522_TransmitterWaitsRF (mfrc522_Mod* Dev, bool status);
-void mfrc522_TransmitterEnableCRC (mfrc522_Mod* Dev, bool status);
-void mfrc522_TransmitterForce100ASK (mfrc522_Mod* Dev, bool status);
-void mfrc522_TransmitterStart (mfrc522_Mod* Dev);
-
-void mfrc522_AntennaSettings (mfrc522_Mod* Dev, uint8_t options);
-void mfrc522_EnableParity (mfrc522_Mod* Dev, bool status);
-uint8_t mfrc522_GetErrors (mfrc522_Mod* Dev);
-
-void mfrc522_IRQEnable (mfrc522_Mod* Dev, uint16_t MFRC522_INTx, bool status);
-uint16_t mfrc522_IRQGet (mfrc522_Mod* Dev);
-void mfrc522_IRQClear (mfrc522_Mod* Dev, uint16_t MFRC522_INTx);
-
-void mfrc522_ReceiverEnable (mfrc522_Mod* Dev, bool status);
+mfrc522_Class* mfrc522_CreateClass (void (*Delay) (double), uint8_t (*HwInit) (void), void (*ResetControl) (uint8_t), void (*ReadRegister) (uint8_t, uint8_t*), void (*WriteRegister) (uint8_t, uint8_t));
+void mfrc522_DestroyClass (mfrc522_Class* Class);
 
 #ifdef __cplusplus
 }

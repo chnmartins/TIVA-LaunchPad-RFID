@@ -158,6 +158,11 @@ static void ektm4c123gxl_Delay (double sTime);
 
 static uint8_t ektm4c123gxl_SPI_Init (uint8_t EKTM4C123GXL_SPIx);
 
+static uint8_t ektm4c123gxl_RFID_HwInit (void);
+static void ektm4c123gxl_RFID_ReadRegister (uint8_t address, uint8_t* value);
+static void ektm4c123gxl_RFID_WriteRegister (uint8_t address, uint8_t value);
+static void ektm4c123gxl_RFID_ResetControl (uint8_t status);
+
 /* Private functions ---------------------------------------------------------*/
 
 /*
@@ -204,6 +209,16 @@ ektm4c123gxl_Class* ektm4c123gxl_CreateClass (void)
     	return NULL;
     }
 
+    temp->mfrc522Class = mfrc522_CreateClass(ektm4c123gxl_Delay, ektm4c123gxl_RFID_HwInit, ektm4c123gxl_RFID_ResetControl, ektm4c123gxl_RFID_ReadRegister, ektm4c123gxl_RFID_WriteRegister);
+    if (temp->mfrc522Class == NULL)
+    {
+        free(SpiClass);
+        free(TimerClass);
+        free(UartClass);
+        free(GpioClass);
+        free(temp);
+        return NULL;
+    }
 
     temp->LED_Init = ektm4c123gxl_LED_Init;
     temp->LED_Off = ektm4c123gxl_LED_Off;
@@ -649,9 +664,65 @@ static uint8_t ektm4c123gxl_SPI_Init (uint8_t EKTM4C123GXL_SPIx)
 		fSpi_DestroyInitStruct(InitStruct);
 
     	result = EKTM4C123GXL_STATUS_ON;
+
+    	break;
+    }
+
+    return result;
 }
 
-void brd_RfidTest (void)
+/*
+ *
+ */
+
+static uint8_t ektm4c123gxl_RFID_HwInit (void)
 {
-    mfrc522_Initialization(RfidDev);
+    uint8_t result = EKTM4C123GXL_STATUS_OFF;
+
+    if (ektm4c123gxl_SPI_Init(EKTM4C123GXL_SPI_RFID) == EKTM4C123GXL_STATUS_ON)
+    {
+        GpioClass->InitOutput(EKTM4C123GXL_SPIRFID_RST_PIN, EKTM4C123GXL_SPIRFID_RST_PORT, EKTM4C123GXL_SPIRFID_RST_TYPE, EKTM4C123GXL_SPIRFID_RST_CURRENT);
+        GpioClass->InitInput(EKTM4C123GXL_SPIRFID_IRQ_PIN, EKTM4C123GXL_SPIRFID_IRQ_PORT, EKTM4C123GXL_SPIRFID_IRQ_TYPE, EKTM4C123GXL_SPIRFID_IRQ_CURRENT);
+        result = EKTM4C123GXL_STATUS_ON;
+    }
+
+    return result;
+}
+
+/*
+ *
+ */
+
+static void ektm4c123gxl_RFID_ReadRegister (uint8_t address, uint8_t* value)
+{
+    uint32_t a = (address << 8) | 0x00, b = 0;
+
+    SpiClass->SendData(EKTM4C123GXL_SPIRFID_MODULE, a);
+    SpiClass->ReadData(EKTM4C123GXL_SPIRFID_MODULE, &b);
+
+    *value = (uint8_t) (b & 0x000000FF);
+}
+
+/*
+ *
+ */
+
+static void ektm4c123gxl_RFID_WriteRegister (uint8_t address, uint8_t value)
+{
+    uint32_t a = (address << 8) | value, b = 0;
+
+    SpiClass->SendData(EKTM4C123GXL_SPIRFID_MODULE, a);
+    SpiClass->ReadData(EKTM4C123GXL_SPIRFID_MODULE, &b);
+}
+
+/*
+ *
+ */
+
+static void ektm4c123gxl_RFID_ResetControl (uint8_t status)
+{
+    if (status)
+        GpioClass->OutputInteract(EKTM4C123GXL_SPIRFID_RST_PIN, EKTM4C123GXL_SPIRFID_RST_PORT, FGPIO_OUTPUT_HIGH);
+    else
+        GpioClass->OutputInteract(EKTM4C123GXL_SPIRFID_RST_PIN, EKTM4C123GXL_SPIRFID_RST_PORT, FGPIO_OUTPUT_LOW);
 }

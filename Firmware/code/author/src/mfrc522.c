@@ -21,23 +21,25 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
+
 #include "mfrc522.h"
 #include "conf.h"
 
 /* Private typedef -----------------------------------------------------------*/
 typedef enum
 {
-    Idle,
-    Mem,
-    GenerateRandomID,
-    CalcCrc,
-    Transmit,
-    NoCmdChange,
-    Receive,
-    Transceive,
-    MFAuthent,
-    SoftReset,
+    Command_Idle,
+    Command_Mem,
+    Command_GenerateRandomID,
+    Command_CalcCrc,
+    Command_Transmit,
+    Command_NoCmdChange,
+    Command_Receive,
+    Command_Transceive,
+    Command_MFAuthent,
+    Command_SoftReset,
 } mfrc522_Command;
 
 typedef enum
@@ -73,9 +75,8 @@ typedef enum
 #define MFRC522_READ_MSB    0x80
 #define MFRC522_WRITE_MSB   0x00
 
-
 // Commands
-#define MFRC522_CMD_SOFTRESET   (0x0F)
+#define MFRC522_CMD_SOFTRESET       (0x0F)
 
 // Register Addresses
 #define MFRC522_ADDR_COMMAND        (0x01)
@@ -224,7 +225,6 @@ typedef enum
 #define MFRC522_TIMER_OPT_GATED_AUX1                     (0x04)
 #define MFRC522_TIMER_OPT_AUTOLOAD                       (0x08)
 #define MFRC522_TIMER_OPT_EVENPRESCALER                  (0x10)
-#define MFRC522_TIMER_OPT_INT                            (0x20)
 
 #define MFRC522_ANTENNA_OPT_TX1_MODULATED				 (0x01)
 #define MFRC522_ANTENNA_OPT_TX2_MODULATED				 (0x02)
@@ -246,7 +246,7 @@ typedef enum
 #define MFRC522_INT_ALLINTS             (0x1FF)
 
 #define MFRC522_ERROR_FIFOWRITE         (0x01)
-#define MFRC522_ERROR_OVERHEAT       (0x02)
+#define MFRC522_ERROR_OVERHEAT          (0x02)
 #define MFRC522_ERROR_BUFFEROVERFLOW    (0x04)
 #define MFRC522_ERROR_COLLISION         (0x08)
 #define MFRC522_ERROR_CRC               (0x10)
@@ -260,125 +260,180 @@ typedef enum
 /* Private variables ---------------------------------------------------------*/
 
 /* Private function prototypes -----------------------------------------------*/
-void mfrc522_CommandExecute (mfrc522_Mod* Dev, mfrc522_Command cmd);
-mfrc522_Command mfrc522_GetCurrentCommand (mfrc522_Mod* Dev);
-
-uint8_t mfrc522_FIFOGetLevel (mfrc522_Mod* Dev);
-void mfrc522_FIFORead (mfrc522_Mod* Dev, uint8_t* buffer, uint8_t bytestoread);
-void mfrc522_FIFOWrite (mfrc522_Mod* Dev, uint8_t* buffer, uint8_t bytestowrite);
-void mfrc522_FIFOClear (mfrc522_Mod* Dev);
-
-void mfrc522_TransmitterSetSpeed (mfrc522_Mod* Dev, mfrc522_Speed speed);
-mfrc522_Speed mfrc522_TransmitterGetSpeed (mfrc522_Mod* Dev);
-
-mfrc522_Modem mfrc522_ModemGetStatus (mfrc522_Mod* Dev);
+static uint8_t mfrc522_Init (mfrc522_Class* class);
+static uint8_t mfrc522_SelfTest (mfrc522_Class* class);
+static void mfrc522_ReadRegister (mfrc522_Class* class, uint8_t address, uint8_t* value);
+static void mfrc522_WriteRegister (mfrc522_Class* class, uint8_t address, uint8_t value);
+static void mfrc522_HardReset (mfrc522_Class* class);
+static void mfrc522_SoftReset (mfrc522_Class* class);
+static mfrc522_Command mfrc522_CommandCurrent (mfrc522_Class* class);
+static void mfrc522_CommandExecute (mfrc522_Class* class, mfrc522_Command cmd);
+static void mfrc522_ReceiverStatus (mfrc522_Class* class, uint8_t MFRC522_STATUSx);
+static mfrc522_Modem mfrc522_ModemCheck (mfrc522_Class* class);
+static void mfrc522_IntStatus (mfrc522_Class* class, uint16_t MFRC522_INTx, uint8_t MFRC522_STATUSx);
+static uint16_t mfrc522_IntGet (mfrc522_Class* class);
+static void mfrc522_IntClear (mfrc522_Class* class, uint16_t MFRC522_INTx);
+static uint8_t mfrc522_ErrorGet (mfrc522_Class* class);
+static void mfrc522_TransmitterSetBits (mfrc522_Class* class, uint8_t nBits);
+static void mfrc522_TransmitterWaitForRF (mfrc522_Class* class, uint8_t MFRC522_STATUSx);
+static void mfrc522_TransmitterCrcStatus (mfrc522_Class* class, uint8_t MFRC522_STATUSx);
+static void mfrc522_TransmitterSpeedSet (mfrc522_Class* class, mfrc522_Speed speed);
+static mfrc522_Speed mfrc522_TransmitterSpeedGet (mfrc522_Class* class);
+static void mfrc522_TransmitterModulation100ASK (mfrc522_Class* class, uint8_t MFRC522_STATUSx);
+static void mfrc522_TransmitterStart (mfrc522_Class* class);
+static void mfrc522_AntennaConfig (mfrc522_Class* class, uint8_t MFRC522_ANTENNA_OPTx);
+static void mfrc522_ParityStatus (mfrc522_Class* class, uint8_t MFRC522_STATUSx);
+static void mfrc522_TimerConfig (mfrc522_Class* class, uint16_t MFRC522_TIMER_OPTx);
+static void mfrc522_TimerValues (mfrc522_Class* class, uint16_t prescaler, uint16_t reloadval);
+static uint16_t mfrc522_TimerCounterGet (mfrc522_Class* class);
+static uint8_t mfrc522_TimerIsRunning (mfrc522_Class* class);
+static void mfrc522_TimerStart (mfrc522_Class* class);
+static void mfrc522_TimerStop (mfrc522_Class* class);
+static void mfrc522_InternalBufferWrite (mfrc522_Class* class, uint8_t* buffer);
+static void mfrc522_InternalBufferRead (mfrc522_Class* class, uint8_t* buffer);
+static void mfrc522_FIFOWrite (mfrc522_Class* class, uint8_t* buffer, uint8_t bytestowrite);
+static void mfrc522_FIFOClear (mfrc522_Class* class);
+static uint8_t mfrc522_FIFOLevelGet (mfrc522_Class* class);
+static void mfrc522_FIFORead (mfrc522_Class* class, uint8_t* buffer, uint8_t bytestoread);
 
 /* Private functions ---------------------------------------------------------*/
+
+/*
+ * Create class.
+ */
+
+mfrc522_Class* mfrc522_CreateClass (void (*Delay) (double), uint8_t (*HwInit) (void), void (*ResetControl) (uint8_t), void (*ReadRegister) (uint8_t, uint8_t*), void (*WriteRegister) (uint8_t, uint8_t))
+{
+    mfrc522_Class* class = malloc(sizeof(mfrc522_Class));
+    if (class == NULL)
+        return NULL;
+
+    class->Init = mfrc522_Init;
+    class->SelfTest = mfrc522_SelfTest;
+
+    class->__Delay = Delay;
+    class->__HwInit = HwInit;
+    class->__ResetControl = ResetControl;
+    class->__ReadRegister = ReadRegister;
+    class->__WriteRegister = WriteRegister;
+
+    return class;
+}
+
+
+/*
+ * Destroy class.
+ */
+
+void mfrc522_DestroyClass (mfrc522_Class* class)
+{
+    free(class);
+}
 
 /*
  * Initializes the mfrc522 chip and performs a hard reset.
  */
 
-mfrc522_result mfrc522_Init (mfrc522_Mod* Dev)
+static uint8_t mfrc522_Init (mfrc522_Class* class)
 {
-    mfrc522_result res = mfrc522_ok;
+    uint8_t result = MFRC522_STATUS_OFF;
 
-    if (Dev->HwInit() == false)
-        res = mfrc522_error;
+    if (class->__HwInit())
+    {
+        mfrc522_HardReset(class);
 
-    mfrc522_HardReset(Dev);
+        result = MFRC522_STATUS_ON;
+    }
 
-    mfrc522_Initialization(Dev);
-
-    return res;
+    return result;
 }
 
 /*
  * Reads the value at address.
  */
 
-void mfrc522_ReadAddress (mfrc522_Mod* Dev, uint8_t address, uint8_t* value)
+static void mfrc522_ReadRegister (mfrc522_Class* class, uint8_t address, uint8_t* value)
 {
-    Dev->ReadAddress(MFRC522_READ_MSB | (address << 1), value);
+    class->__ReadRegister(MFRC522_READ_MSB | (address << 1), value);
 }
 
 /*
  * Writes the value at address.
  */
 
-void mfrc522_WriteAddress (mfrc522_Mod* Dev, uint8_t address, uint8_t value)
+static void mfrc522_WriteRegister (mfrc522_Class* class, uint8_t address, uint8_t value)
 {
-    Dev->WriteAddress(MFRC522_WRITE_MSB | (address << 1), value);
+    class->__WriteRegister(MFRC522_WRITE_MSB | (address << 1), value);
 }
 
 /*
  * Performs a hard reset.
  */
 
-void mfrc522_HardReset (mfrc522_Mod* Dev)
+static void mfrc522_HardReset (mfrc522_Class* class)
 {
-    Dev->Delay(0.1);
-    Dev->RstCtrl(MFRC522_GPIO_LOW);
-    Dev->Delay(0.1);
-    Dev->RstCtrl(MFRC522_GPIO_HIGH);
-    Dev->Delay(0.1);
+    class->__Delay(0.1);
+    class->__ResetControl(MFRC522_GPIO_LOW);
+    class->__Delay(0.1);
+    class->__ResetControl(MFRC522_GPIO_HIGH);
+    class->__Delay(0.1);
 }
 
 /*
  * Stops the current command and executes a soft reset.
  */
 
-void mfrc522_SoftReset (mfrc522_Mod* Dev)
+static void mfrc522_SoftReset (mfrc522_Class* class)
 {
-    mfrc522_CommandExecute(Dev, SoftReset);
-    Dev->Delay(0.1);
-    while (mfrc522_GetCurrentCommand(Dev) != Idle);
+    mfrc522_CommandExecute(class, Command_SoftReset);
+    class->__Delay(0.1);
+    while (mfrc522_CommandCurrent(class) != Command_Idle);
 }
 
 /*
  * Returns the current command being executed.
  */
 
-mfrc522_Command mfrc522_GetCurrentCommand (mfrc522_Mod* Dev)
+static mfrc522_Command mfrc522_CommandCurrent (mfrc522_Class* class)
 {
     uint8_t temp;
     mfrc522_Command cmd;
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMMAND, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_COMMAND, &temp);
 
     temp &= MFRC522_BMS_COMMAND_COMMAND_BITS;
 
     switch (temp)
     {
     case MFRC522_BMS_COMMAND_COMMAND_IDLE:
-        cmd = Idle;
+        cmd = Command_Idle;
         break;
     case MFRC522_BMS_COMMAND_COMMAND_MEM:
-        cmd = Mem;
+        cmd = Command_Mem;
         break;
     case MFRC522_BMS_COMMAND_COMMAND_GENRANDOMID:
-        cmd = GenerateRandomID;
+        cmd = Command_GenerateRandomID;
         break;
     case MFRC522_BMS_COMMAND_COMMAND_CALCCRC:
-        cmd = CalcCrc;
+        cmd = Command_CalcCrc;
         break;
     case MFRC522_BMS_COMMAND_COMMAND_TRANSMIT:
-        cmd = Transmit;
+        cmd = Command_Transmit;
         break;
     case MFRC522_BMS_COMMAND_COMMAND_NOCMDCHANGE:
-        cmd = NoCmdChange;
+        cmd = Command_NoCmdChange;
         break;
     case MFRC522_BMS_COMMAND_COMMAND_RECEIVE:
-        cmd = Receive;
+        cmd = Command_Receive;
         break;
     case MFRC522_BMS_COMMAND_COMMAND_TRANSCEIVE:
-        cmd = Transceive;
+        cmd = Command_Transceive;
         break;
     case MFRC522_BMS_COMMAND_COMMAND_MFAUTHENT:
-        cmd = MFAuthent;
+        cmd = Command_MFAuthent;
         break;
     case MFRC522_BMS_COMMAND_COMMAND_SOFTRESET:
-        cmd = SoftReset;
+        cmd = Command_SoftReset;
         break;
     default:
         break;
@@ -391,58 +446,58 @@ mfrc522_Command mfrc522_GetCurrentCommand (mfrc522_Mod* Dev)
  * Executes the specified command.
  */
 
-void mfrc522_CommandExecute (mfrc522_Mod* Dev, mfrc522_Command cmd)
+static void mfrc522_CommandExecute (mfrc522_Class* class, mfrc522_Command cmd)
 {
     uint8_t temp;
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMMAND, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_COMMAND, &temp);
 
     temp &= ~(MFRC522_BMS_COMMAND_COMMAND_BITS);
 
     switch (cmd)
     {
-    case Idle:
+    case Command_Idle:
         temp |= MFRC522_BMS_COMMAND_COMMAND_IDLE;
         break;
-    case Mem:
+    case Command_Mem:
         temp |= MFRC522_BMS_COMMAND_COMMAND_MEM;
         break;
-    case GenerateRandomID:
+    case Command_GenerateRandomID:
         temp |= MFRC522_BMS_COMMAND_COMMAND_GENRANDOMID;
         break;
-    case CalcCrc:
+    case Command_CalcCrc:
         temp |= MFRC522_BMS_COMMAND_COMMAND_CALCCRC;
         break;
-    case Transmit:
+    case Command_Transmit:
         temp |= MFRC522_BMS_COMMAND_COMMAND_TRANSMIT;
         break;
-    case NoCmdChange:
+    case Command_NoCmdChange:
         temp |= MFRC522_BMS_COMMAND_COMMAND_NOCMDCHANGE;
         break;
-    case Receive:
+    case Command_Receive:
         temp |= MFRC522_BMS_COMMAND_COMMAND_RECEIVE;
         break;
-    case Transceive:
+    case Command_Transceive:
         temp |= MFRC522_BMS_COMMAND_COMMAND_TRANSCEIVE;
         break;
-    case MFAuthent:
+    case Command_MFAuthent:
         temp |= MFRC522_BMS_COMMAND_COMMAND_MFAUTHENT;
         break;
-    case SoftReset:
+    case Command_SoftReset:
         temp |= MFRC522_BMS_COMMAND_COMMAND_SOFTRESET;
         break;
     default:
         break;
     }
 
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_COMMAND, temp);
+    mfrc522_WriteRegister(class, MFRC522_ADDR_COMMAND, temp);
 }
 
 /*
  * Performs a self test. How to perform a self reset can be found on the datasheet (Section 16.1.1).
  */
 
-mfrc522_result mfrc522_SelfTest (mfrc522_Mod* Dev)
+static uint8_t mfrc522_SelfTest (mfrc522_Class* class)
 {
     uint8_t* data;
     uint8_t V1[64] = {0x00, 0xC6, 0x37, 0xD5, 0x32, 0xB7, 0x57, 0x5C,
@@ -462,104 +517,64 @@ mfrc522_result mfrc522_SelfTest (mfrc522_Mod* Dev)
                       0x86, 0x96, 0x83, 0x38, 0xCF, 0x9D, 0x5B, 0x6D,
                       0xDC, 0x15, 0xBA, 0x3E, 0x7D, 0x95, 0x3B, 0x2F};
     uint8_t temp;
-    mfrc522_result cmd = mfrc522_error;
+    uint8_t result = MFRC522_STATUS_OFF;
 
-    mfrc522_SoftReset(Dev);
+    mfrc522_SoftReset(class);
 
     data = calloc(64, sizeof(uint8_t));
     if (data == NULL)
-        return mfrc522_nomem;
+        return result;
 
-    mfrc522_IBWrite(Dev, data);
+    mfrc522_InternalBufferWrite(class, data);
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_AUTOTEST, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_AUTOTEST, &temp);
     temp &= ~(MFRC522_BMS_AUTOTEST_SELFTEST_BITS);
     temp |= MFRC522_BMS_AUTOTEST_SELFTEST_SELFTEST;
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_AUTOTEST, temp);
+    mfrc522_WriteRegister(class, MFRC522_ADDR_AUTOTEST, temp);
 
-    mfrc522_FIFOWrite(Dev, data, 1);
+    mfrc522_FIFOWrite(class, data, 1);
 
-    mfrc522_CommandExecute(Dev, CalcCrc);
-    while (mfrc522_GetCurrentCommand(Dev) != Idle);
+    mfrc522_CommandExecute(class, Command_CalcCrc);
+    class->__Delay(1);
+    while (mfrc522_CommandCurrent(class) != Command_Idle);
 
-    mfrc522_FIFORead(Dev, data, 64);
+    mfrc522_FIFORead(class, data, 64);
 
     if (!(memcmp(data, V1, 64))) {
-        cmd = mfrc522_V2;
+        result = MFRC522_STATUS_ON;
     } else if (!(memcmp(data, V2, 64))) {
-        cmd = mfrc522_V1;
+        result = MFRC522_STATUS_ON;
     }
 
     free(data);
 
-    return cmd;
-}
-
-/*
- * Performs the initialization part per the ISO normative for type A cards.
- */
-
-void mfrc522_Initialization (mfrc522_Mod* Dev)
-{
-    uint8_t data[64] = {0x00};
-    uint16_t INT = 0;
-    uint8_t ERR = 0;
-    uint16_t i = 0;
-
-    mfrc522_TimerConfigure(Dev, MFRC522_TIMER_OPT_AUTO);
-    mfrc522_TimerSetParams(Dev, 169, 1000);
-
-    mfrc522_TransmitterForce100ASK(Dev, true);
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_MODE, 0x3D); // CRC
-    mfrc522_AntennaSettings(Dev, MFRC522_ANTENNA_OPT_TX2_INVERTED_WHEN_ON | MFRC522_ANTENNA_OPT_TX1_MODULATED | MFRC522_ANTENNA_OPT_TX2_MODULATED);
-    //mfrc522_ReceiverEnable(Dev, false);
-
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_BITFRAMING, ((0 << 4) | 7));
-    mfrc522_IRQClear(Dev, MFRC522_INT_ALLINTS);
-    mfrc522_FIFOClear(Dev);
-
-    data[0] = MFCommand_ReqA;
-    mfrc522_FIFOWrite(Dev, data, 1);
-
-    mfrc522_CommandExecute(Dev, Transceive);
-    mfrc522_TransmitterStart(Dev);
-
-    do
-    {
-        i++;
-        INT = mfrc522_IRQGet(Dev) & (MFRC522_INT_ERR | MFRC522_INT_RX | MFRC522_INT_TIMER);
-    } while (!(INT));
-
-    ERR = mfrc522_GetErrors(Dev);
-
-    mfrc522_FIFORead(Dev, data, 64);
-
+    return result;
 }
 
 /*
  * Deactivates or activates the analog part of the receiver.
  */
 
-void mfrc522_ReceiverEnable (mfrc522_Mod* Dev, bool status)
+static void mfrc522_ReceiverStatus (mfrc522_Class* class, uint8_t MFRC522_STATUSx)
 {
     uint8_t temp;
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMMAND, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_COMMAND, &temp);
     temp |= MFRC522_BMS_COMMAND_COMMAND_NOCMDCHANGE; // Add CMD NO CHANGE.
-    (status) ? (temp &= ~(MFRC522_BMS_COMMAND_RCVOFF_BIT)) : (temp |= MFRC522_BMS_COMMAND_RCVOFF_BIT);
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_COMMAND, temp);
+    (MFRC522_STATUSx == MFRC522_STATUS_ON) ? (temp &= ~(MFRC522_BMS_COMMAND_RCVOFF_BIT)) : (temp |= MFRC522_BMS_COMMAND_RCVOFF_BIT);
+    mfrc522_WriteRegister(class, MFRC522_ADDR_COMMAND, temp);
 }
 
 /*
  * Returns the current status of the receiver and transmitter state machines.
  */
 
-mfrc522_Modem mfrc522_ModemGetStatus (mfrc522_Mod* Dev)
+static mfrc522_Modem mfrc522_ModemCheck (mfrc522_Class* class)
 {
 	uint8_t temp;
 	mfrc522_Modem status;
 
-	mfrc522_ReadAddress(Dev, MFRC522_ADDR_STATUS2, &temp);
+	mfrc522_ReadRegister(class, MFRC522_ADDR_STATUS2, &temp);
 
 	temp &= MFRC522_BMS_STATUS2_MODEMSTATE_BITS;
 
@@ -602,45 +617,45 @@ mfrc522_Modem mfrc522_ModemGetStatus (mfrc522_Mod* Dev)
  * status = true enables the interrupts, status = false disables the interrupts.
  */
 
-void mfrc522_IRQEnable (mfrc522_Mod* Dev, uint16_t MFRC522_INTx, bool status)
+static void mfrc522_IntStatus (mfrc522_Class* class, uint16_t MFRC522_INTx, uint8_t MFRC522_STATUSx)
 {
     uint8_t temp;
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMIEN, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_COMIEN, &temp);
     if (MFRC522_INTx & MFRC522_INT_TX)
-        (status) ? (temp |= MFRC522_BMS_COMIEN_TXIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_TXIEN_BIT);
+        (MFRC522_STATUSx == MFRC522_STATUS_ON) ? (temp |= MFRC522_BMS_COMIEN_TXIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_TXIEN_BIT);
     if (MFRC522_INTx & MFRC522_INT_TIMER)
-        (status) ? (temp |= MFRC522_BMS_COMIEN_TIMERIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_TIMERIEN_BIT);
+        (MFRC522_STATUSx == MFRC522_STATUS_ON) ? (temp |= MFRC522_BMS_COMIEN_TIMERIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_TIMERIEN_BIT);
     if (MFRC522_INTx & MFRC522_INT_RX)
-        (status) ? (temp |= MFRC522_BMS_COMIEN_RXIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_RXIEN_BIT);
+        (MFRC522_STATUSx == MFRC522_STATUS_ON) ? (temp |= MFRC522_BMS_COMIEN_RXIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_RXIEN_BIT);
     if (MFRC522_INTx & MFRC522_INT_LOALERT)
-        (status) ? (temp |= MFRC522_BMS_COMIEN_LOALERTIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_LOALERTIEN_BIT);
+        (MFRC522_STATUSx == MFRC522_STATUS_ON) ? (temp |= MFRC522_BMS_COMIEN_LOALERTIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_LOALERTIEN_BIT);
     if (MFRC522_INTx & MFRC522_INT_HIALERT)
-        (status) ? (temp |= MFRC522_BMS_COMIEN_HIALERTIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_HIALERTIEN_BIT);
+        (MFRC522_STATUSx == MFRC522_STATUS_ON) ? (temp |= MFRC522_BMS_COMIEN_HIALERTIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_HIALERTIEN_BIT);
     if (MFRC522_INTx & MFRC522_INT_IDLE)
-        (status) ? (temp |= MFRC522_BMS_COMIEN_IDLEIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_IDLEIEN_BIT);
+        (MFRC522_STATUSx == MFRC522_STATUS_ON) ? (temp |= MFRC522_BMS_COMIEN_IDLEIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_IDLEIEN_BIT);
     if (MFRC522_INTx & MFRC522_INT_ERR)
-        (status) ? (temp |= MFRC522_BMS_COMIEN_ERRIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_ERRIEN_BIT);
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_COMIEN, temp);
+        (MFRC522_STATUSx == MFRC522_STATUS_ON) ? (temp |= MFRC522_BMS_COMIEN_ERRIEN_BIT) : (temp &= ~MFRC522_BMS_COMIEN_ERRIEN_BIT);
+    mfrc522_WriteRegister(class, MFRC522_ADDR_COMIEN, temp);
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_DIVIEN, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_DIVIEN, &temp);
     if (MFRC522_INTx & MFRC522_INT_MFINACT)
-        (status) ? (temp |= MFRC522_BMS_DIVIEN_MFINACTIEN_BIT) : (temp &= ~MFRC522_BMS_DIVIEN_MFINACTIEN_BIT);
+        (MFRC522_STATUSx == MFRC522_STATUS_ON) ? (temp |= MFRC522_BMS_DIVIEN_MFINACTIEN_BIT) : (temp &= ~MFRC522_BMS_DIVIEN_MFINACTIEN_BIT);
     if (MFRC522_INTx & MFRC522_INT_CRC)
-        (status) ? (temp |= MFRC522_BMS_DIVIEN_CRCIEN_BIT) : (temp &= ~MFRC522_BMS_DIVIEN_CRCIEN_BIT);
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_DIVIEN, temp);
+        (MFRC522_STATUSx == MFRC522_STATUS_ON) ? (temp |= MFRC522_BMS_DIVIEN_CRCIEN_BIT) : (temp &= ~MFRC522_BMS_DIVIEN_CRCIEN_BIT);
+    mfrc522_WriteRegister(class, MFRC522_ADDR_DIVIEN, temp);
 }
 
 /*
  * Returns the status of all the interrupts.
  */
 
-uint16_t mfrc522_IRQGet (mfrc522_Mod* Dev)
+static uint16_t mfrc522_IntGet (mfrc522_Class* class)
 {
     uint8_t temp;
     uint16_t res = 0;
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMIRQ, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_COMIRQ, &temp);
     if (temp & MFRC522_BMS_COMIRQ_TXIRQ_BIT)
         res |= MFRC522_INT_TX;
     if (temp & MFRC522_BMS_COMIRQ_TIMERIRQ_BIT)
@@ -656,7 +671,7 @@ uint16_t mfrc522_IRQGet (mfrc522_Mod* Dev)
     if (temp & MFRC522_BMS_COMIRQ_ERRIRQ_BIT)
         res |= MFRC522_INT_ERR;
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_DIVIRQ, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_DIVIRQ, &temp);
     if (temp & MFRC522_BMS_DIVIRQ_MFINACTIRQ_BIT)
         res |= MFRC522_INT_MFINACT;
     if (temp & MFRC522_BMS_DIVIRQ_CRCIRQ_BIT)
@@ -669,11 +684,11 @@ uint16_t mfrc522_IRQGet (mfrc522_Mod* Dev)
  * Clears the specified interrupts.
  */
 
-void mfrc522_IRQClear (mfrc522_Mod* Dev, uint16_t MFRC522_INTx)
+static void mfrc522_IntClear (mfrc522_Class* class, uint16_t MFRC522_INTx)
 {
     uint8_t temp;
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMIRQ, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_COMIRQ, &temp);
     temp &= ~MFRC522_BMS_COMIRQ_SET1_BIT;
     if (!(MFRC522_INTx & MFRC522_INT_TX))
         temp &= ~(MFRC522_BMS_COMIRQ_TXIRQ_BIT);
@@ -689,27 +704,27 @@ void mfrc522_IRQClear (mfrc522_Mod* Dev, uint16_t MFRC522_INTx)
         temp &= ~(MFRC522_BMS_COMIRQ_IDLEIRQ_BIT);
     if (!(MFRC522_INTx & MFRC522_INT_ERR))
         temp &= ~(MFRC522_BMS_COMIRQ_ERRIRQ_BIT);
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_COMIRQ, temp);
+    mfrc522_WriteRegister(class, MFRC522_ADDR_COMIRQ, temp);
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_DIVIRQ, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_DIVIRQ, &temp);
     temp &= ~MFRC522_BMS_DIVIRQ_SET2_BIT;
     if (!(MFRC522_INTx & MFRC522_INT_MFINACT))
         temp &= ~(MFRC522_BMS_DIVIRQ_MFINACTIRQ_BIT);
     if (!(MFRC522_INTx & MFRC522_INT_CRC))
         temp &= ~(MFRC522_BMS_DIVIRQ_CRCIRQ_BIT);
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_DIVIRQ, temp);
+    mfrc522_WriteRegister(class, MFRC522_ADDR_DIVIRQ, temp);
 }
 
 /*
  * Gets the errors indicated by the device.
  */
 
-uint8_t mfrc522_GetErrors (mfrc522_Mod* Dev)
+static uint8_t mfrc522_ErrorGet (mfrc522_Class* class)
 {
     uint8_t temp;
     uint8_t result = 0;
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_ERROR, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_ERROR, &temp);
     if (temp & MFRC522_BMS_ERROR_WRERR_BIT)
         result |= MFRC522_ERROR_FIFOWRITE;
     if (temp & MFRC522_BMS_ERROR_TEMPERR_BIT)
@@ -734,57 +749,57 @@ uint8_t mfrc522_GetErrors (mfrc522_Mod* Dev)
  * A value of zero indicates all the bits of the last byte will be transmitted.
  */
 
-void mfrc522_TransmitterSetBits (mfrc522_Mod* Dev, uint8_t nBits)
+static void mfrc522_TransmitterSetBits (mfrc522_Class* class, uint8_t nBits)
 {
 	uint8_t temp;
 
-	mfrc522_ReadAddress(Dev, MFRC522_ADDR_BITFRAMING, &temp);
+	mfrc522_ReadRegister(class, MFRC522_ADDR_BITFRAMING, &temp);
 	temp &= ~(MFRC522_BMS_BITFRAMING_TXLASTBITS_BITS);
 	temp |= MFRC522_BMS_BITFRAMING_TXLASTBITS((nBits & 0x07));
-	mfrc522_WriteAddress(Dev, MFRC522_ADDR_BITFRAMING, temp);
+	mfrc522_WriteRegister(class, MFRC522_ADDR_BITFRAMING, temp);
 }
 
 /*
  * If enabled, transmitter can only be started if an RF field is generated.
  */
 
-void mfrc522_TransmitterWaitsRF (mfrc522_Mod* Dev, bool status)
+static void mfrc522_TransmitterWaitForRF (mfrc522_Class* class, uint8_t MFRC522_STATUSx)
 {
 	uint8_t temp;
 
-	mfrc522_ReadAddress(Dev, MFRC522_ADDR_MODE, &temp);
-	if (status)
+	mfrc522_ReadRegister(class, MFRC522_ADDR_MODE, &temp);
+	if (MFRC522_STATUSx == MFRC522_STATUS_ON)
 		temp |= MFRC522_BMS_MODE_TXWAITRF_BIT;
 	else
 		temp &= ~(MFRC522_BMS_MODE_TXWAITRF_BIT);
-	mfrc522_WriteAddress(Dev, MFRC522_ADDR_MODE, temp);
+	mfrc522_WriteRegister(class, MFRC522_ADDR_MODE, temp);
 }
 
 /*
  * Enables or disables CRC generation during transmission.
  */
 
-void mfrc522_TransmitterEnableCRC (mfrc522_Mod* Dev, bool status)
+static void mfrc522_TransmitterCrcStatus (mfrc522_Class* class, uint8_t MFRC522_STATUSx)
 {
 	uint8_t temp;
 
-	mfrc522_ReadAddress(Dev, MFRC522_ADDR_TXMODE, &temp);
-	if (status)
+	mfrc522_ReadRegister(class, MFRC522_ADDR_TXMODE, &temp);
+	if (MFRC522_STATUSx == MFRC522_STATUS_ON)
 		temp |= MFRC522_BMS_TXMODE_TXCRCEN_BIT;
 	else
 		temp &= ~(MFRC522_BMS_TXMODE_TXCRCEN_BIT);
-	mfrc522_WriteAddress(Dev, MFRC522_ADDR_TXMODE, temp);
+	mfrc522_WriteRegister(class, MFRC522_ADDR_TXMODE, temp);
 }
 
 /*
  * Sets the speed for the transmitter.
  */
 
-void mfrc522_TransmitterSetSpeed (mfrc522_Mod* Dev, mfrc522_Speed speed)
+static void mfrc522_TransmitterSpeedSet (mfrc522_Class* class, mfrc522_Speed speed)
 {
 	uint8_t temp;
 
-	mfrc522_ReadAddress(Dev, MFRC522_ADDR_TXMODE, &temp);
+	mfrc522_ReadRegister(class, MFRC522_ADDR_TXMODE, &temp);
 	temp &= ~(MFRC522_BMS_TXMODE_TXSPEED_BITS);
 	switch (speed)
 	{
@@ -803,19 +818,19 @@ void mfrc522_TransmitterSetSpeed (mfrc522_Mod* Dev, mfrc522_Speed speed)
 	default:
 		break;
 	}
-	mfrc522_WriteAddress(Dev, MFRC522_ADDR_TXMODE, temp);
+	mfrc522_WriteRegister(class, MFRC522_ADDR_TXMODE, temp);
 }
 
 /*
  * Get the speed of the transmitter.
  */
 
-mfrc522_Speed mfrc522_TransmitterGetSpeed (mfrc522_Mod* Dev)
+static mfrc522_Speed mfrc522_TransmitterSpeedGet (mfrc522_Class* class)
 {
 	uint8_t temp;
 	mfrc522_Speed speed;
 
-	mfrc522_ReadAddress(Dev, MFRC522_ADDR_TXMODE, &temp);
+	mfrc522_ReadRegister(class, MFRC522_ADDR_TXMODE, &temp);
 	temp &= MFRC522_BMS_TXMODE_TXSPEED_BITS;
 	switch (temp)
 	{
@@ -842,29 +857,29 @@ mfrc522_Speed mfrc522_TransmitterGetSpeed (mfrc522_Mod* Dev)
  * Forces 100% ASK Modulation independent of other settings.
  */
 
-void mfrc522_TransmitterForce100ASK (mfrc522_Mod* Dev, bool status)
+static void mfrc522_TransmitterModulation100ASK (mfrc522_Class* class, uint8_t MFRC522_STATUSx)
 {
 	uint8_t temp;
 
-	mfrc522_ReadAddress(Dev, MFRC522_ADDR_TXASK, &temp);
-	if (status)
+	mfrc522_ReadRegister(class, MFRC522_ADDR_TXASK, &temp);
+	if (MFRC522_STATUSx == MFRC522_STATUS_ON)
 		temp |= MFRC522_BMS_TXASK_FORCE100ASK_BIT;
 	else
 		temp &= ~(MFRC522_BMS_TXASK_FORCE100ASK_BIT);
-	mfrc522_WriteAddress(Dev, MFRC522_ADDR_TXMODE, temp);
+	mfrc522_WriteRegister(class, MFRC522_ADDR_TXMODE, temp);
 }
 
 /*
  * Starts the transmission of data. Only in combination with transceive command.
  */
 
-void mfrc522_TransmitterStart (mfrc522_Mod* Dev)
+static void mfrc522_TransmitterStart (mfrc522_Class* class)
 {
     uint8_t temp;
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_BITFRAMING, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_BITFRAMING, &temp);
     temp |= MFRC522_BMS_BITFRAMING_STARTSEND_BIT;
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_BITFRAMING, temp);
+    mfrc522_WriteRegister(class, MFRC522_ADDR_BITFRAMING, temp);
 }
 
 /*
@@ -883,65 +898,64 @@ void mfrc522_TransmitterStart (mfrc522_Mod* Dev)
  * Use a logical OR of MFRC522_ANTENNA_OPTx defines.
  */
 
-void mfrc522_AntennaSettings (mfrc522_Mod* Dev, uint8_t options)
+static void mfrc522_AntennaConfig (mfrc522_Class* class, uint8_t MFRC522_ANTENNA_OPTx)
 {
 	uint8_t temp;
 
-	mfrc522_ReadAddress(Dev, MFRC522_ADDR_TXCONTROL, &temp);
+	mfrc522_ReadRegister(class, MFRC522_ADDR_TXCONTROL, &temp);
 
-
-	if (options & MFRC522_ANTENNA_OPT_TX1_MODULATED)
+	if (MFRC522_ANTENNA_OPTx & MFRC522_ANTENNA_OPT_TX1_MODULATED)
 		temp |= MFRC522_BMS_TXCONTROL_TX1RFEN_BIT;
 	else
 		temp &= ~(MFRC522_BMS_TXCONTROL_TX1RFEN_BIT);
 
-	if (options & MFRC522_ANTENNA_OPT_TX2_MODULATED)
+	if (MFRC522_ANTENNA_OPTx & MFRC522_ANTENNA_OPT_TX2_MODULATED)
 		temp |= MFRC522_BMS_TXCONTROL_TX2RFEN_BIT;
 	else
 		temp &= ~(MFRC522_BMS_TXCONTROL_TX2RFEN_BIT);
 
-	if (options & MFRC522_ANTENNA_OPT_TX2_UNMODULATED)
+	if (MFRC522_ANTENNA_OPTx & MFRC522_ANTENNA_OPT_TX2_UNMODULATED)
 		temp |= MFRC522_BMS_TXCONTROL_TX2CW_BIT;
 	else
 		temp &= ~(MFRC522_BMS_TXCONTROL_TX2CW_BIT);
 
-	if (options & MFRC522_ANTENNA_OPT_TX1_INVERTED_WHEN_OFF)
+	if (MFRC522_ANTENNA_OPTx & MFRC522_ANTENNA_OPT_TX1_INVERTED_WHEN_OFF)
 		temp |= MFRC522_BMS_TXCONTROL_INVTX1RFOFF_BIT;
 	else
 		temp &= ~(MFRC522_BMS_TXCONTROL_INVTX1RFOFF_BIT);
 
-	if (options & MFRC522_ANTENNA_OPT_TX2_INVERTED_WHEN_OFF)
+	if (MFRC522_ANTENNA_OPTx & MFRC522_ANTENNA_OPT_TX2_INVERTED_WHEN_OFF)
 		temp |= MFRC522_BMS_TXCONTROL_INVTX2RFOFF_BIT;
 	else
 		temp &= ~(MFRC522_BMS_TXCONTROL_INVTX2RFOFF_BIT);
 
-	if (options & MFRC522_ANTENNA_OPT_TX1_INVERTED_WHEN_ON)
+	if (MFRC522_ANTENNA_OPTx & MFRC522_ANTENNA_OPT_TX1_INVERTED_WHEN_ON)
 		temp |= MFRC522_BMS_TXCONTROL_INVTX1RFON_BIT;
 	else
 		temp &= ~(MFRC522_BMS_TXCONTROL_INVTX1RFON_BIT);
 
-	if (options & MFRC522_ANTENNA_OPT_TX2_INVERTED_WHEN_ON)
+	if (MFRC522_ANTENNA_OPTx & MFRC522_ANTENNA_OPT_TX2_INVERTED_WHEN_ON)
 		temp |= MFRC522_BMS_TXCONTROL_INVTX2RFON_BIT;
 	else
 		temp &= ~(MFRC522_BMS_TXCONTROL_INVTX2RFON_BIT);
 
-	mfrc522_WriteAddress(Dev, MFRC522_ADDR_TXCONTROL, temp);
+	mfrc522_WriteRegister(class, MFRC522_ADDR_TXCONTROL, temp);
 }
 
 /*
  * Sets if the parity bit for transmission and parity check for reception should be active or not.
  */
 
-void mfrc522_EnableParity (mfrc522_Mod* Dev, bool status)
+static void mfrc522_ParityStatus (mfrc522_Class* class, uint8_t MFRC522_STATUSx)
 {
 	uint8_t temp;
 
-	mfrc522_ReadAddress(Dev, MFRC522_ADDR_MFRX, &temp);
-	if (!(status))
+	mfrc522_ReadRegister(class, MFRC522_ADDR_MFRX, &temp);
+	if (MFRC522_STATUSx == MFRC522_STATUS_OFF)
 		temp |= MFRC522_BMS_MFRX_PARITYDISABLE_BIT;
 	else
 		temp &= ~(MFRC522_BMS_MFRX_PARITYDISABLE_BIT);
-	mfrc522_WriteAddress(Dev, MFRC522_ADDR_MFRX, temp);
+	mfrc522_WriteRegister(class, MFRC522_ADDR_MFRX, temp);
 }
 
 /*
@@ -958,43 +972,35 @@ void mfrc522_EnableParity (mfrc522_Mod* Dev, bool status)
  * Use MFRC522_TIMER_OPTx defines to define the options.
  */
 
-void mfrc522_TimerConfigure (mfrc522_Mod* Dev, uint16_t options)
+static void mfrc522_TimerConfig (mfrc522_Class* class, uint16_t MFRC522_TIMER_OPTx)
 {
     uint8_t temp;
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_TMODE, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_TMODE, &temp);
 
     temp &= ~(MFRC522_BMS_TMODE_TAUTO_BIT);
-    if (options & MFRC522_TIMER_OPT_AUTO)
+    if (MFRC522_TIMER_OPTx & MFRC522_TIMER_OPT_AUTO)
         temp |= MFRC522_BMS_TMODE_TAUTO_BIT;
 
     temp &= ~(MFRC522_BMS_TMODE_TGATED_BITS);
-    if (options & MFRC522_TIMER_OPT_GATED_AUX1)
+    if (MFRC522_TIMER_OPTx & MFRC522_TIMER_OPT_GATED_AUX1)
         temp |= MFRC522_BMS_TMODE_TGATED_AUX1;
-    else if (options & MFRC522_TIMER_OPT_GATED_MFIN)
+    else if (MFRC522_TIMER_OPTx & MFRC522_TIMER_OPT_GATED_MFIN)
         temp |= MFRC522_BMS_TMODE_TGATED_MFIN;
 
     temp &= ~(MFRC522_BMS_TMODE_TAUTORESTART_BIT);
-    if (options & MFRC522_TIMER_OPT_AUTOLOAD)
+    if (MFRC522_TIMER_OPTx & MFRC522_TIMER_OPT_AUTOLOAD)
         temp |= (MFRC522_BMS_TMODE_TAUTORESTART_BIT);
 
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_TMODE, temp);
+    mfrc522_WriteRegister(class, MFRC522_ADDR_TMODE, temp);
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_DEMOD, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_DEMOD, &temp);
 
     temp &= ~(MFRC522_BMS_DEMOD_TPRESCALEVEN_BIT);
-    if (options & MFRC522_TIMER_OPT_EVENPRESCALER)
+    if (MFRC522_TIMER_OPTx & MFRC522_TIMER_OPT_EVENPRESCALER)
         temp |= MFRC522_BMS_DEMOD_TPRESCALEVEN_BIT;
 
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_DEMOD, temp);
-
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMIEN, &temp);
-
-    temp &= ~(MFRC522_BMS_COMIEN_TIMERIEN_BIT);
-    if (options & MFRC522_TIMER_OPT_EVENPRESCALER)
-        temp |= MFRC522_BMS_COMIEN_TIMERIEN_BIT;
-
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_COMIEN, temp);
+    mfrc522_WriteRegister(class, MFRC522_ADDR_DEMOD, temp);
 }
 
 /*
@@ -1007,32 +1013,32 @@ void mfrc522_TimerConfigure (mfrc522_Mod* Dev, uint16_t options)
  * Delay in secods, with even prescaler: ((Prescaler * 2 + 2) * (ReloadVal + 1)) / (13560000)
  */
 
-void mfrc522_TimerSetParams (mfrc522_Mod* Dev, uint16_t prescaler, uint16_t reloadval)
+static void mfrc522_TimerValues (mfrc522_Class* class, uint16_t prescaler, uint16_t reloadval)
 {
     uint8_t temp;
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_TMODE, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_TMODE, &temp);
 
     temp &= ~(MFRC522_BMS_TMODE_TPRESCALERHI_BITS);
     temp |= MFRC522_BMS_TMODE_TPRESCALERHI((prescaler & 0x0F00) >> 8);
 
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_TMODE, temp);
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_TPRESCALERLO, prescaler & 0x00FF);
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_TRELOADHI, (reloadval & 0xFF00) >> 8);
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_TRELOADLO, reloadval & 0x00FF);
+    mfrc522_WriteRegister(class, MFRC522_ADDR_TMODE, temp);
+    mfrc522_WriteRegister(class, MFRC522_ADDR_TPRESCALERLO, prescaler & 0x00FF);
+    mfrc522_WriteRegister(class, MFRC522_ADDR_TRELOADHI, (reloadval & 0xFF00) >> 8);
+    mfrc522_WriteRegister(class, MFRC522_ADDR_TRELOADLO, reloadval & 0x00FF);
 }
 
 /*
  * Gets the current value of the timer.
  */
 
-uint16_t mfrc522_TimerGetValue (mfrc522_Mod* Dev)
+static uint16_t mfrc522_TimerCounterGet (mfrc522_Class* class)
 {
     uint8_t Hi, Lo;
     uint16_t Count;
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_TCOUNTERVALHI, &Hi);
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_TCOUNTERVALLO, &Lo);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_TCOUNTERVALHI, &Hi);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_TCOUNTERVALLO, &Lo);
 
     Count = (Hi << 8) | Lo;
 
@@ -1040,108 +1046,87 @@ uint16_t mfrc522_TimerGetValue (mfrc522_Mod* Dev)
 }
 
 /*
- * Checks if the timer reached zero.
- */
-
-bool mfrc522_TimerIsFinished (mfrc522_Mod* Dev)
-{
-    uint8_t temp;
-
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_COMIRQ, &temp);
-
-    if (temp & MFRC522_BMS_COMIRQ_TIMERIRQ_BIT)
-    {
-        // TODO: CLEAR THE INTERRUPT IF SET.
-        return true;
-    }
-
-    return false;
-}
-
-/*
  * Checks if the timer is running
  */
 
-bool mfrc522_TimerIsRunning (mfrc522_Mod* Dev)
+static uint8_t mfrc522_TimerIsRunning (mfrc522_Class* class)
 {
     uint8_t temp;
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_STATUS1, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_STATUS1, &temp);
 
     if (temp & MFRC522_BMS_STATUS1_TRUNNING_BIT)
-    {
-        return true;
-    }
+        return MFRC522_STATUS_ON;
 
-    return false;
+    return MFRC522_STATUS_OFF;
 }
 
 /*
  * Starts the timer immediately.
  */
 
-void mfrc522_TimerStart (mfrc522_Mod* Dev)
+static void mfrc522_TimerStart (mfrc522_Class* class)
 {
     uint8_t temp;
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_CONTROL, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_CONTROL, &temp);
     temp |= MFRC522_BMS_CONTROL_TSTARTNOW_BIT;
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_CONTROL, temp);
+    mfrc522_WriteRegister(class, MFRC522_ADDR_CONTROL, temp);
 }
 
 /*
  * Stops the timer immediately.
  */
 
-void mfrc522_TimerStop (mfrc522_Mod* Dev)
+static void mfrc522_TimerStop (mfrc522_Class* class)
 {
     uint8_t temp;
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_CONTROL, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_CONTROL, &temp);
     temp |= MFRC522_BMS_CONTROL_TSTOPNOW_BIT;
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_CONTROL, temp);
+    mfrc522_WriteRegister(class, MFRC522_ADDR_CONTROL, temp);
 }
 
 /*
  * Writes 25 bytes from the buffer into the internal memory of the chip.
  */
 
-void mfrc522_IBWrite (mfrc522_Mod* Dev, uint8_t* buffer)
+static void mfrc522_InternalBufferWrite (mfrc522_Class* class, uint8_t* buffer)
 {
-    mfrc522_FIFOClear(Dev);
-    mfrc522_FIFOWrite(Dev, buffer, 25);
-    mfrc522_CommandExecute(Dev, Mem);
-    while (mfrc522_GetCurrentCommand(Dev) != Idle);
+    mfrc522_FIFOClear(class);
+    mfrc522_FIFOWrite(class, buffer, 25);
+    mfrc522_CommandExecute(class, Command_Mem);
+    while (mfrc522_CommandCurrent(class) != Command_Idle);
 }
 
 /*
  * Reads the internal data from the buffer.
  */
 
-void mfrc522_IBRead (mfrc522_Mod* Dev, uint8_t* buffer)
+static void mfrc522_InternalBufferRead (mfrc522_Class* class, uint8_t* buffer)
 {
-    mfrc522_FIFOClear(Dev);
-    mfrc522_CommandExecute(Dev, Mem);
-    while (mfrc522_GetCurrentCommand(Dev) != Idle);
-    mfrc522_FIFORead(Dev, buffer, 25);
+    mfrc522_FIFOClear(class);
+    mfrc522_CommandExecute(class, Command_Mem);
+    while (mfrc522_CommandCurrent(class) != Command_Idle);
+    mfrc522_FIFORead(class, buffer, 25);
 }
 
 /*
  * Writes the specified bytes on the FIFO. The FIFO capacity is 64 bytes.
  */
 
-void mfrc522_FIFOWrite (mfrc522_Mod* Dev, uint8_t* buffer, uint8_t bytestowrite)
+static void mfrc522_FIFOWrite (mfrc522_Class* class, uint8_t* buffer, uint8_t bytestowrite)
 {
     uint8_t FifoLevel = 0;
     uint8_t i = 0;
 
-    FifoLevel = mfrc522_FIFOGetLevel(Dev);
+    FifoLevel = mfrc522_FIFOLevelGet(class);
 
     while ((FifoLevel < 64) && (i < bytestowrite))
     {
-        mfrc522_WriteAddress(Dev, MFRC522_ADDR_FIFODATA, *(buffer + i));
-        while (FifoLevel == mfrc522_FIFOGetLevel(Dev));
-        FifoLevel = mfrc522_FIFOGetLevel(Dev);
+        mfrc522_WriteRegister(class, MFRC522_ADDR_FIFODATA, *(buffer + i));
+        while (FifoLevel == mfrc522_FIFOLevelGet(class));
+        FifoLevel = mfrc522_FIFOLevelGet(class);
         i++;
     }
 }
@@ -1150,28 +1135,28 @@ void mfrc522_FIFOWrite (mfrc522_Mod* Dev, uint8_t* buffer, uint8_t bytestowrite)
  * Clears the FIFO, write and read pointers become zero.
  */
 
-void mfrc522_FIFOClear (mfrc522_Mod* Dev)
+static void mfrc522_FIFOClear (mfrc522_Class* class)
 {
     uint8_t temp;
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_FIFOLEVEL, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_FIFOLEVEL, &temp);
 
     temp |= MFRC522_BMS_FIFOLEVEL_FLUSHBUFFER_BIT;
 
-    mfrc522_WriteAddress(Dev, MFRC522_ADDR_FIFOLEVEL, temp);
+    mfrc522_WriteRegister(class, MFRC522_ADDR_FIFOLEVEL, temp);
 
-    while (mfrc522_FIFOGetLevel(Dev) > 0);
+    while (mfrc522_FIFOLevelGet(class) > 0);
 }
 
 /*
  * Gets the current level on the FIFO.
  */
 
-uint8_t mfrc522_FIFOGetLevel (mfrc522_Mod* Dev)
+static uint8_t mfrc522_FIFOLevelGet (mfrc522_Class* class)
 {
     uint8_t temp = 0;
 
-    mfrc522_ReadAddress(Dev, MFRC522_ADDR_FIFOLEVEL, &temp);
+    mfrc522_ReadRegister(class, MFRC522_ADDR_FIFOLEVEL, &temp);
 
     temp &= MFRC522_BMS_FIFOLEVEL_FIFOLEVEL_BITS;
 
@@ -1182,18 +1167,18 @@ uint8_t mfrc522_FIFOGetLevel (mfrc522_Mod* Dev)
  * Reads data from the FIFO.
  */
 
-void mfrc522_FIFORead (mfrc522_Mod* Dev, uint8_t* buffer, uint8_t bytestoread)
+static void mfrc522_FIFORead (mfrc522_Class* class, uint8_t* buffer, uint8_t bytestoread)
 {
     uint8_t FifoLevel = 0;
     uint8_t i = 0;
 
-    FifoLevel = mfrc522_FIFOGetLevel(Dev);
+    FifoLevel = mfrc522_FIFOLevelGet(class);
 
     while (FifoLevel > 0 && (i < bytestoread))
     {
-        mfrc522_ReadAddress(Dev, MFRC522_ADDR_FIFODATA, buffer + i);
-        while (FifoLevel == mfrc522_FIFOGetLevel(Dev));
-        FifoLevel = mfrc522_FIFOGetLevel(Dev);
+        mfrc522_ReadRegister(class, MFRC522_ADDR_FIFODATA, buffer + i);
+        while (FifoLevel == mfrc522_FIFOLevelGet(class));
+        FifoLevel = mfrc522_FIFOLevelGet(class);
         i++;
     }
 }
