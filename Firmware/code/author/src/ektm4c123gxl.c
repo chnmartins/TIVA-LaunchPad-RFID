@@ -32,371 +32,542 @@
 #include "conf.h"
 
 /* Private typedef -----------------------------------------------------------*/
+typedef struct
+{
+    uint8_t* data;
+    uint8_t Length;
+    uint8_t IndexProc;
+    uint8_t IndexUnproc;
+} ektm4c123gxl_CircularBuffer;
 
 /* Private define ------------------------------------------------------------*/
-#define LEDR_PIN     GPIO_PIN_1
-#define LEDR_PORT    GPIO_PORTF_BASE
-#define LEDB_PIN     GPIO_PIN_2
-#define LEDB_PORT    GPIO_PORTF_BASE
-#define LEDG_PIN     GPIO_PIN_3
-#define LEDG_PORT    GPIO_PORTF_BASE
+/******** LEDS */
+#define EKTM4C123GXL_LEDR_PIN     FGPIO_PIN_1
+#define EKTM4C123GXL_LEDR_PORT    FGPIO_PORT_F
+#define EKTM4C123GXL_LEDB_PIN     FGPIO_PIN_2
+#define EKTM4C123GXL_LEDB_PORT    FGPIO_PORT_F
+#define EKTM4C123GXL_LEDG_PIN     FGPIO_PIN_3
+#define EKTM4C123GXL_LEDG_PORT    FGPIO_PORT_F
 
+/******** PUSHBUTTONS */
+#define EKTM4C123GXL_PB1_PIN      FGPIO_PIN_4
+#define EKTM4C123GXL_PB1_PORT     FGPIO_PORT_F
+#define EKTM4C123GXL_PB2_PIN      FGPIO_PIN_0
+#define EKTM4C123GXL_PB2_PORT     FGPIO_PORT_F
 
-#define PB1_PIN      GPIO_PIN_4
-#define PB1_PORT     GPIO_PORTF_BASE
-#define PB2_PIN      GPIO_PIN_0
-#define PB2_PORT     GPIO_PORTF_BASE
+/******** UART DEBUG */
+#define	EKTM4C123GXL_UARTDBG_MODULE			FUART_MODULE_0
+#define	EKTM4C123GXL_UARTDBG_WORD_BITS		FUART_WORD_BITS_EIGTH
+#define EKTM4C123GXL_UARTDBG_STOP_BITS		FUART_STOP_BITS_ONE
+#define EKTM4C123GXL_UARTDBG_PARITY			FUART_PARITY_NONE
+#define EKTM4C123GXL_UARTDBG_CLOCKSOURCE	FUART_CLOCK_SOURCE_SYSTEM
+#define EKTM4C123GXL_UARTDBG_BAUDRATE		FUART_BAUDRATE_115200
 
+#define EKTM4C123GXL_UARTDBG_RX_PIN  		FGPIO_PIN_0
+#define EKTM4C123GXL_UARTDBG_RX_PORT 		FGPIO_PORT_A
+#define EKTM4C123GXL_UARTDBG_RX_AF   		GPIO_PA0_U0RX
+#define EKTM4C123GXL_UARTDBG_RX_TYPE		FGPIO_TYPE_PUSH_PULL_PULLDOWN
+#define EKTM4C123GXL_UARTDBG_RX_CURRENT		FGPIO_CURRENT_2MA
 
-#define DBGUART_RX_PIN  GPIO_PIN_0
-#define DBGUART_RX_PORT GPIO_PORTA_BASE
-#define DBGUART_RX_AF   GPIO_PA0_U0RX
+#define EKTM4C123GXL_UARTDBG_TX_PIN  		FGPIO_PIN_1
+#define EKTM4C123GXL_UARTDBG_TX_PORT 		FGPIO_PORT_A
+#define EKTM4C123GXL_UARTDBG_TX_AF   		GPIO_PA1_U0TX
+#define EKTM4C123GXL_UARTDBG_TX_TYPE		FGPIO_TYPE_PUSH_PULL_PULLDOWN
+#define EKTM4C123GXL_UARTDBG_TX_CURRENT		FGPIO_CURRENT_2MA
 
-#define DBGUART_TX_PIN  GPIO_PIN_1
-#define DBGUART_TX_PORT GPIO_PORTA_BASE
-#define DBGUART_TX_AF   GPIO_PA1_U0TX
+#define EKTM4C123GXL_UARTDBG_RXBUF_SIZE   50
+#define EKTM4C123GXL_UARTDBG_TXBUF_SIZE   50
 
-#define DBGUART_RXBUF_SIZE   50
-#define DBGUART_TXBUF_SIZE   50
+#define EKTM4C123GXL_UARTDBG_CMD_DELIMITER   '\n'
+#define EKTM4C123GXL_UARTDBG_CMD_HELLO       "Are you there?\r\n"
+#define EKTM4C123GXL_UARTDBG_CMD_HEY         "Yes, I'm here.\r\n"
+#define EKTM4C123GXL_UARTDBG_CMD_UNKNOWN     "I have no idea what you are talking about.\r\n"
 
-#define DBGUART_CMD_DELIMITER   '\n'
-#define DBGUART_CMD_HELLO       "Are you there?\r\n"
-#define DBGUART_CMD_HEY         "Yes, I'm here.\r\n"
-#define DBGUART_CMD_UNKNOWN     "I have no idea what you are talking about.\r\n"
+/******** SPI RFID */
 
+#define EKTM4C123GXL_SPIRFID_MODULE				FSPI_MODULE_0
+#define EKTM4C123GXL_SPIRFID_PROTOCOL			FSPI_PROTOCOL_POL0_PHA0
+#define EKTM4C123GXL_SPIRFID_CLOCK_SOURCE		FSPI_CLOCK_SOURCE_SYSTEM
+#define EKTM4C123GXL_SPIRFID_DATA_WIDTH			(16)
+#define EKTM4C123GXL_SPIRFID_MODE				FSPI_MODE_MASTER
+#define EKTM4C123GXL_SPIRFID_BITRATE			(50000)
 
-#define SPIRFID_MISO_PIN        GPIO_PIN_4
-#define SPIRFID_MISO_PORT       GPIO_PORTA_BASE
-#define SPIRFID_MISO_AF         GPIO_PA4_SSI0RX
+#define EKTM4C123GXL_SPIRFID_MISO_PIN        	FGPIO_PIN_4
+#define EKTM4C123GXL_SPIRFID_MISO_PORT       	FGPIO_PORT_A
+#define	EKTM4C123GXL_SPIRFID_MISO_TYPE			FGPIO_TYPE_PUSH_PULL_PULLDOWN
+#define EKTM4C123GXL_SPIRFID_MISO_CURRENT		FGPIO_CURRENT_2MA
+#define EKTM4C123GXL_SPIRFID_MISO_AF         	GPIO_PA4_SSI0RX
 
-#define SPIRFID_MOSI_PIN        GPIO_PIN_5
-#define SPIRFID_MOSI_PORT       GPIO_PORTA_BASE
-#define SPIRFID_MOSI_AF         GPIO_PA5_SSI0TX
+#define EKTM4C123GXL_SPIRFID_MOSI_PIN       	FGPIO_PIN_5
+#define EKTM4C123GXL_SPIRFID_MOSI_PORT       	FGPIO_PORT_A
+#define	EKTM4C123GXL_SPIRFID_MOSI_TYPE			FGPIO_TYPE_PUSH_PULL_PULLDOWN
+#define EKTM4C123GXL_SPIRFID_MOSI_CURRENT		FGPIO_CURRENT_2MA
+#define EKTM4C123GXL_SPIRFID_MOSI_AF         	GPIO_PA5_SSI0TX
 
-#define SPIRFID_NSS_PIN         GPIO_PIN_3
-#define SPIRFID_NSS_PORT        GPIO_PORTA_BASE
-#define SPIRFID_NSS_AF          GPIO_PA3_SSI0FSS
+#define EKTM4C123GXL_SPIRFID_NSS_PIN         	FGPIO_PIN_3
+#define EKTM4C123GXL_SPIRFID_NSS_PORT        	FGPIO_PORT_A
+#define	EKTM4C123GXL_SPIRFID_NSS_TYPE			FGPIO_TYPE_PUSH_PULL_PULLUP
+#define EKTM4C123GXL_SPIRFID_NSS_CURRENT		FGPIO_CURRENT_2MA
+#define EKTM4C123GXL_SPIRFID_NSS_AF          	GPIO_PA3_SSI0FSS
 
-#define SPIRFID_CLK_PIN         GPIO_PIN_2
-#define SPIRFID_CLK_PORT        GPIO_PORTA_BASE
-#define SPIRFID_CLK_AF          GPIO_PA2_SSI0CLK
+#define EKTM4C123GXL_SPIRFID_CLK_PIN         	FGPIO_PIN_2
+#define EKTM4C123GXL_SPIRFID_CLK_PORT        	FGPIO_PORT_A
+#define	EKTM4C123GXL_SPIRFID_CLK_TYPE			FGPIO_TYPE_PUSH_PULL_PULLDOWN
+#define EKTM4C123GXL_SPIRFID_CLK_CURRENT		FGPIO_CURRENT_2MA
+#define EKTM4C123GXL_SPIRFID_CLK_AF          	GPIO_PA2_SSI0CLK
 
-#define SPIRFID_RST_PIN         GPIO_PIN_2
-#define SPIRFID_RST_PORT        GPIO_PORTE_BASE
+#define EKTM4C123GXL_SPIRFID_RST_PIN         	FGPIO_PIN_2
+#define EKTM4C123GXL_SPIRFID_RST_PORT        	FGPIO_PORT_E
+#define	EKTM4C123GXL_SPIRFID_RST_TYPE			FGPIO_TYPE_PUSH_PULL_PULLUP
+#define EKTM4C123GXL_SPIRFID_RST_CURRENT		FGPIO_CURRENT_2MA
 
-#define SPIRFID_IRQ_PIN         GPIO_PIN_3
-#define SPIRFID_IRQ_PORT        GPIO_PORTE_BASE
-
-#define SPIRFID_RXBUF_SIZE      10
-#define SPIRFID_TXBUF_SIZE      10
+#define EKTM4C123GXL_SPIRFID_IRQ_PIN         	FGPIO_PIN_3
+#define EKTM4C123GXL_SPIRFID_IRQ_PORT        	FGPIO_PORT_E
+#define	EKTM4C123GXL_SPIRFID_IRQ_TYPE			FGPIO_TYPE_PUSH_PULL_PULLDOWN
+#define EKTM4C123GXL_SPIRFID_IRQ_CURRENT		FGPIO_CURRENT_2MA
 
 /* Private macro -------------------------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
-fUart_Mod* UartDbg;
-fSpi_Mod* SpiRfid;
-fGpio_Pin*  RstRfid;
-fGpio_Pin*  IrqRfid;
-mfrc522_Mod* RfidDev;
+fGpio_Class* GpioClass;
+fUart_Class* UartClass;
+ektm4c123gxl_CircularBuffer* UartDbgTxBuf;
+ektm4c123gxl_CircularBuffer* UartDbgRxBuf;
+fTim_Class* TimerClass;
+fSpi_Class*	SpiClass;
 
 /* Private function prototypes -----------------------------------------------*/
+static void ektm4c123gxl_LED_Init (uint8_t LEDx);
+static void ektm4c123gxl_LED_On (uint8_t LEDx);
+static void ektm4c123gxl_LED_Off (uint8_t LEDx);
+static void ektm4c123gxl_LED_Toggle (uint8_t LEDx);
+
+static void ektm4c123gxl_PB_Init (uint8_t PBx);
+static uint8_t ektm4c123gxl_PB_Read (uint8_t EKTM4C123GXL_PBx);
+static void ektm4c123gxl_PB_IntInit (uint8_t PBx, void (*PB_INTIRQ) (void));
+static uint8_t ektm4c123gxl_PB_IntTest (uint8_t EKTM4C123GXL_PBx);
+static void ektm4c123gxl_PB_IntClear (uint8_t EKTM4C123GXL_PBx);
+static void ektm4c123gxl_PB_IntStatus (uint8_t EKTM4C123GXL_PBx, uint8_t EKTM4C123GXL_STATUSx);
+
+static uint8_t ektm4c123gxl_UART_IntInit (uint8_t EKTM4C123GXL_UARTx);
+uint8_t ektm4c123gxl_UART_SendString (uint8_t EKTM4C123GXL_UARTx, uint8_t* string);
+static void ektm4c123gxl_UART_Parse (uint8_t EKTM4C123GXL_UARTx);
+static void ektm4c123gxl_UartDbg_Irq (void);
+
+static void ektm4c123gxl_Delay (double sTime);
+
+static uint8_t ektm4c123gxl_SPI_Init (uint8_t EKTM4C123GXL_SPIx);
 
 /* Private functions ---------------------------------------------------------*/
 
 /*
- * Initialize the LEDs.
+ *
  */
 
-void brd_LedInit (uint8_t LEDx)
+ektm4c123gxl_Class* ektm4c123gxl_CreateClass (void)
 {
-    fGpio_Pin temp = {.Current = CURR_2MA, .Direction = DIR_OUT, .Type = TYPE_PP_PU};
+    ektm4c123gxl_Class* temp = malloc(sizeof(ektm4c123gxl_Class));
+    if (temp == NULL)
+    	return NULL;
 
-    if (LEDx & LEDR)
+    GpioClass = fGpio_CreateClass();
+    if (GpioClass == NULL)
     {
-        temp.Pin = LEDR_PIN, temp.Port = LEDR_PORT;
-        fGpio_Init(&temp);
+    	free(temp);
+    	return NULL;
     }
-    if (LEDx & LEDG)
+
+    UartClass = fUart_CreateClass();
+    if (UartClass == NULL)
     {
-        temp.Pin = LEDG_PIN, temp.Port = LEDG_PORT;
-        fGpio_Init(&temp);
+    	free(GpioClass);
+    	free(temp);
+    	return NULL;
     }
-    if (LEDx & LEDB)
+
+    TimerClass = fTim_CreateClass();
+    if (TimerClass == NULL)
     {
-        temp.Pin = LEDB_PIN, temp.Port = LEDB_PORT;
-        fGpio_Init(&temp);
+    	free(UartClass);
+    	free(GpioClass);
+    	free(temp);
+    	return NULL;
     }
+
+    SpiClass = fSpi_CreateClass();
+    if (SpiClass == NULL)
+    {
+    	free(TimerClass);
+    	free(UartClass);
+    	free(GpioClass);
+    	free(temp);
+    	return NULL;
+    }
+
+
+    temp->LED_Init = ektm4c123gxl_LED_Init;
+    temp->LED_Off = ektm4c123gxl_LED_Off;
+    temp->LED_On = ektm4c123gxl_LED_On;
+    temp->LED_Toggle = ektm4c123gxl_LED_Toggle;
+
+    temp->PB_Init = ektm4c123gxl_PB_Init;
+    temp->PB_Read = ektm4c123gxl_PB_Read;
+    temp->PB_IntInit = ektm4c123gxl_PB_IntInit;
+    temp->PB_IntStatus = ektm4c123gxl_PB_IntStatus;
+    temp->PB_IntClear = ektm4c123gxl_PB_IntClear;
+    temp->PB_IntTest = ektm4c123gxl_PB_IntTest;
+
+    temp->UART_IntInit = ektm4c123gxl_UART_IntInit;
+    temp->UART_SendString = ektm4c123gxl_UART_SendString;
+    temp->UART_Parse = ektm4c123gxl_UART_Parse;
+
+    temp->Delay = ektm4c123gxl_Delay;
+
+    temp->SPI_Init = ektm4c123gxl_SPI_Init;
+
+    return temp;
 }
 
 /*
- * Interact with the LEDs.
+ *
  */
 
-void brd_LedInteract (uint8_t LEDx, uint8_t LED_x)
+void ektm4c123gxl_DestroyClass (ektm4c123gxl_Class* class)
 {
-    fGpio_Pin temp;
-    void (*fnPtr) (fGpio_Pin* const);
-
-    switch (LED_x)
-    {
-    case LED_ON:
-        fnPtr = fGpio_setHigh;
-        break;
-    case LED_OFF:
-        fnPtr = fGpio_setLow;
-        break;
-    case LED_TOGGLE:
-        fnPtr = fGpio_setToggle;
-        break;
-    }
-
-    if (LEDx & LEDR)
-    {
-        temp.Pin = LEDR_PIN, temp.Port = LEDR_PORT;
-        fnPtr(&temp);
-    }
-    if (LEDx & LEDG)
-    {
-        temp.Pin = LEDG_PIN, temp.Port = LEDG_PORT;
-        fnPtr(&temp);
-    }
-    if (LEDx & LEDB)
-    {
-        temp.Pin = LEDB_PIN, temp.Port = LEDB_PORT;
-        fnPtr(&temp);
-    }
+    free(class);
 }
 
 /*
- * Initialize the pushbuttons.
+ * Wrapper functions LEDs.
  */
 
-void brd_PushButtonInit (uint8_t PBx)
+static void ektm4c123gxl_LED_Init (uint8_t EKTM4C123GXL_LEDx)
 {
-    fGpio_Pin temp = {.Current = CURR_2MA, .Direction = DIR_IN, .Type = TYPE_PP_PU};
-
-    if (PBx & PB1)
-    {
-        temp.Pin = PB1_PIN, temp.Port = PB1_PORT;
-        fGpio_Init(&temp);
-    }
-    if (PBx & PB2)
-    {
-        temp.Pin = PB2_PIN, temp.Port = PB2_PORT;
-        fGpio_Init(&temp);
-    }
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDR)
+        GpioClass->InitOutput(EKTM4C123GXL_LEDR_PIN, EKTM4C123GXL_LEDR_PORT, FGPIO_TYPE_PUSH_PULL_PULLDOWN, FGPIO_CURRENT_2MA);
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDB)
+        GpioClass->InitOutput(EKTM4C123GXL_LEDB_PIN, EKTM4C123GXL_LEDB_PORT, FGPIO_TYPE_PUSH_PULL_PULLDOWN, FGPIO_CURRENT_2MA);
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDG)
+        GpioClass->InitOutput(EKTM4C123GXL_LEDG_PIN, EKTM4C123GXL_LEDG_PORT, FGPIO_TYPE_PUSH_PULL_PULLDOWN, FGPIO_CURRENT_2MA);
 }
 
 /*
- * Read the pushbuttons.
+ * Wrapper functions LEDs.
  */
 
-uint8_t brd_PushButtonRead (uint8_t PBx)
+static void ektm4c123gxl_LED_On (uint8_t EKTM4C123GXL_LEDx)
 {
-    fGpio_Pin temp;
-    uint8_t val = 0;
-
-    if (PBx & PB1)
-    {
-        temp.Pin = PB1_PIN, temp.Port = PB1_PORT;
-        val |= fGpio_getLevel(&temp) ? PB1 : 0;
-    }
-    if (PBx & PB2)
-    {
-        temp.Pin = PB2_PIN, temp.Port = PB2_PORT;
-        val |= fGpio_getLevel(&temp) ? PB2 : 0;
-    }
-
-    return ~val;
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDR)
+        GpioClass->OutputInteract(EKTM4C123GXL_LEDR_PIN, EKTM4C123GXL_LEDR_PORT, FGPIO_OUTPUT_HIGH);
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDB)
+        GpioClass->OutputInteract(EKTM4C123GXL_LEDB_PIN, EKTM4C123GXL_LEDB_PORT, FGPIO_OUTPUT_HIGH);
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDG)
+        GpioClass->OutputInteract(EKTM4C123GXL_LEDG_PIN, EKTM4C123GXL_LEDG_PORT, FGPIO_OUTPUT_HIGH);
 }
 
 /*
- * Sets the external interrupts on the pushbuttons.
+ * Wrapper functions LEDs.
  */
 
-void brd_PushButtonInitInt (uint8_t PBx, void (*IntIRQ) (void))
+static void ektm4c123gxl_LED_Off (uint8_t EKTM4C123GXL_LEDx)
 {
-    fGpio_Pin temp = {.IntType = INTTYPE_FALLING_EDGE, .IntIRQ = IntIRQ};
-
-    if (PBx & PB1)
-    {
-        temp.Pin = PB1_PIN, temp.Port = PB1_PORT;
-        fGpio_IntInit(&temp);
-    }
-    if (PBx & PB2)
-    {
-        temp.Pin = PB2_PIN, temp.Port = PB2_PORT;
-        fGpio_IntInit(&temp);
-    }
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDR)
+        GpioClass->OutputInteract(EKTM4C123GXL_LEDR_PIN, EKTM4C123GXL_LEDR_PORT, FGPIO_OUTPUT_LOW);
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDB)
+        GpioClass->OutputInteract(EKTM4C123GXL_LEDB_PIN, EKTM4C123GXL_LEDB_PORT, FGPIO_OUTPUT_LOW);
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDG)
+        GpioClass->OutputInteract(EKTM4C123GXL_LEDG_PIN, EKTM4C123GXL_LEDG_PORT, FGPIO_OUTPUT_LOW);
 }
 
 /*
- * Gets the status of the interrupt and clears it if active.
+ * Wrapper functions LEDs.
  */
 
-uint8_t brd_PushButtonGetInt (uint8_t PBx)
+static void ektm4c123gxl_LED_Toggle (uint8_t EKTM4C123GXL_LEDx)
 {
-    fGpio_Pin temp;
-    uint8_t val = 0;
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDR)
+        GpioClass->OutputInteract(EKTM4C123GXL_LEDR_PIN, EKTM4C123GXL_LEDR_PORT, FGPIO_OUTPUT_TOGGLE);
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDB)
+        GpioClass->OutputInteract(EKTM4C123GXL_LEDB_PIN, EKTM4C123GXL_LEDB_PORT, FGPIO_OUTPUT_TOGGLE);
+    if (EKTM4C123GXL_LEDx & EKTM4C123GXL_LEDG)
+        GpioClass->OutputInteract(EKTM4C123GXL_LEDG_PIN, EKTM4C123GXL_LEDG_PORT, FGPIO_OUTPUT_TOGGLE);
+}
 
-    if (PBx & PB1)
+/*
+ * Wrapper functions PBs.
+ */
+
+static void ektm4c123gxl_PB_Init (uint8_t EKTM4C123GXL_PBx)
+{
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB1)
+        GpioClass->InitInput(EKTM4C123GXL_PB1_PIN, EKTM4C123GXL_PB1_PORT, FGPIO_TYPE_PUSH_PULL_PULLUP, FGPIO_CURRENT_2MA);
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB2)
+        GpioClass->InitInput(EKTM4C123GXL_PB2_PIN, EKTM4C123GXL_PB2_PORT, FGPIO_TYPE_PUSH_PULL_PULLUP, FGPIO_CURRENT_2MA);
+}
+
+/*
+ * Wrapper functions PBs.
+ */
+
+static uint8_t ektm4c123gxl_PB_Read (uint8_t EKTM4C123GXL_PBx)
+{
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB1)
     {
-        temp.Pin = PB1_PIN, temp.Port = PB1_PORT;
-        if (fGpio_IntGet(&temp) & temp.Pin)
-        {
-            val |= PB1;
-            fGpio_IntClear(&temp);
-        }
+        if (GpioClass->InputRead(EKTM4C123GXL_PB1_PIN, EKTM4C123GXL_PB1_PORT) == FGPIO_INPUT_HIGH)
+            return EKTM4C123GXL_STATUS_OFF;
+    }
+    else if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB2)
+    {
+        if (GpioClass->InputRead(EKTM4C123GXL_PB2_PIN, EKTM4C123GXL_PB2_PORT) == FGPIO_INPUT_HIGH)
+            return EKTM4C123GXL_STATUS_OFF;
     }
 
-    if (PBx & PB2)
+    return EKTM4C123GXL_STATUS_ON;
+}
+
+/*
+ * Wrapper functions PBs.
+ */
+
+static void ektm4c123gxl_PB_IntInit (uint8_t EKTM4C123GXL_PBx, void (*EKTM4C123GXL_PB_INTIRQ) (void))
+{
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB1)
+        GpioClass->InitInputInt(EKTM4C123GXL_PB1_PIN, EKTM4C123GXL_PB1_PORT, FGPIO_TYPE_PUSH_PULL_PULLUP, FGPIO_CURRENT_2MA, FGPIO_INTTYPE_FALLING_EDGE, EKTM4C123GXL_PB_INTIRQ);
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB2)
+        GpioClass->InitInputInt(EKTM4C123GXL_PB2_PIN, EKTM4C123GXL_PB2_PORT, FGPIO_TYPE_PUSH_PULL_PULLUP, FGPIO_CURRENT_2MA, FGPIO_INTTYPE_FALLING_EDGE, EKTM4C123GXL_PB_INTIRQ);
+}
+
+/*
+ * Wrapper functions PBs.
+ */
+
+static uint8_t ektm4c123gxl_PB_IntTest (uint8_t EKTM4C123GXL_PBx)
+{
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB1)
     {
-        temp.Pin = PB2_PIN, temp.Port = PB2_PORT;
-        if (fGpio_IntGet(&temp) & temp.Pin)
-        {
-            val |= PB2;
-            fGpio_IntClear(&temp);
-        }
+        if (GpioClass->IntTest(EKTM4C123GXL_PB1_PIN, EKTM4C123GXL_PB1_PORT) == FGPIO_INT_ON)
+            return EKTM4C123GXL_STATUS_ON;
+    }
+    else if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB2)
+    {
+        if (GpioClass->IntTest(EKTM4C123GXL_PB2_PIN, EKTM4C123GXL_PB2_PORT) == FGPIO_INT_ON)
+            return EKTM4C123GXL_STATUS_ON;
     }
 
-    return val;
+    return EKTM4C123GXL_STATUS_OFF;
+}
+
+/*
+ * Wrapper functions PBs.
+ */
+
+static void ektm4c123gxl_PB_IntClear (uint8_t EKTM4C123GXL_PBx)
+{
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB1)
+        GpioClass->IntClear(EKTM4C123GXL_PB1_PIN, EKTM4C123GXL_PB1_PORT);
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB2)
+        GpioClass->IntClear(EKTM4C123GXL_PB2_PIN, EKTM4C123GXL_PB2_PORT);
+}
+
+/*
+ * Wrapper functions PBs.
+ */
+
+static void ektm4c123gxl_PB_IntStatus (uint8_t EKTM4C123GXL_PBx, uint8_t EKTM4C123GXL_STATUSx)
+{
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB1)
+        (EKTM4C123GXL_STATUSx == EKTM4C123GXL_STATUS_ON) ?  GpioClass->IntStatus(EKTM4C123GXL_PB1_PIN, EKTM4C123GXL_PB1_PORT, FGPIO_INT_ON) :  GpioClass->IntStatus(EKTM4C123GXL_PB1_PIN, EKTM4C123GXL_PB1_PORT, FGPIO_INT_OFF);
+    if (EKTM4C123GXL_PBx & EKTM4C123GXL_PB2)
+        (EKTM4C123GXL_STATUSx == EKTM4C123GXL_STATUS_ON) ?  GpioClass->IntStatus(EKTM4C123GXL_PB2_PIN, EKTM4C123GXL_PB2_PORT, FGPIO_INT_ON) :  GpioClass->IntStatus(EKTM4C123GXL_PB2_PIN, EKTM4C123GXL_PB2_PORT, FGPIO_INT_OFF);
 }
 
 /*
  * Initializes the specified UART interface.
  */
 
-bool brd_UartInit (uint8_t UARTx)
+static uint8_t ektm4c123gxl_UART_IntInit (uint8_t EKTM4C123GXL_UARTx)
 {
-    switch (UARTx)
-    {
-    case DBGUART:
-    	UartDbg = (fUart_Mod*) calloc (1, sizeof(fUart_Mod));
-    	if (UartDbg == (fUart_Mod*) NULL)
-    		return false;
-    	UartDbg->Rx = (fUart_Pin*) calloc(1, sizeof(fUart_Pin));
-        if (UartDbg->Rx == (fUart_Pin*) NULL)
-            return false;
-    	UartDbg->Tx = (fUart_Pin*) calloc(1, sizeof(fUart_Pin));
-        if (UartDbg->Tx == (fUart_Pin*) NULL)
-            return false;
+	fUart_InitStruct* UartStruct;
+	uint8_t result = EKTM4C123GXL_STATUS_OFF;
 
-        UartDbg->Rx->Pin = DBGUART_RX_PIN;
-        UartDbg->Rx->Port = DBGUART_RX_PORT;
-        UartDbg->Rx->AlternateFunction = DBGUART_RX_AF;
-        UartDbg->Rx->Current = CURR_2MA;
-        UartDbg->Rx->Type = TYPE_PP_PD;
+	switch (EKTM4C123GXL_UARTx)
+	{
+	case EKTM4C123GXL_UART_DBG:
+		UartStruct = malloc(sizeof(fUart_InitStruct));
+		if (UartStruct == NULL) return result;
 
-        UartDbg->Tx->Pin = DBGUART_TX_PIN;
-        UartDbg->Tx->Port = DBGUART_TX_PORT;
-        UartDbg->Tx->AlternateFunction = DBGUART_TX_AF;
-        UartDbg->Tx->Current = CURR_2MA;
-        UartDbg->Tx->Type = TYPE_PP_PD;
+		UartDbgRxBuf = malloc(sizeof(ektm4c123gxl_CircularBuffer));
+		if (UartDbgRxBuf == NULL) return result;
 
-        UartDbg->Module = MOD_UART0;
-        UartDbg->ClockSource = CLK_SYSTEM;
-        UartDbg->Parity = PAR_NONE;
-        UartDbg->Stop = STOP_ONE;
-        UartDbg->Wlen = WLEN_EIGTH;
-        UartDbg->BaudRate = BR_115200;
+		UartDbgTxBuf = malloc(sizeof(ektm4c123gxl_CircularBuffer));
+		if (UartDbgTxBuf == NULL) return result;
 
-        UartDbg->Interrupts = INT_RECEIVE | INT_TRANSMIT | INT_OVERRUN_ERROR | INT_BREAK_ERROR | INT_PARITY_ERROR | INT_FRAMING_ERROR | INT_RECEIVE_TIMEOUT;
-        UartDbg->IntIRQ = brd_UartDbgISR;
+        UartDbgRxBuf->Length = EKTM4C123GXL_UARTDBG_RXBUF_SIZE;
+		UartDbgRxBuf->data = malloc(sizeof(uint8_t) * UartDbgRxBuf->Length);
+		if (UartDbgRxBuf->data == NULL) return result;
 
-        UartDbg->RxBuf = (uint8_t*) calloc(DBGUART_RXBUF_SIZE, sizeof(uint8_t));
-        if (UartDbg->RxBuf == NULL)
-        	return false;
-        UartDbg->RxBufProcIndex = 0;
-        UartDbg->RxBufUnprocIndex = 0;
-        UartDbg->RxBufLength = DBGUART_RXBUF_SIZE;
+        UartDbgTxBuf->Length = EKTM4C123GXL_UARTDBG_TXBUF_SIZE;
+		UartDbgTxBuf->data = malloc(sizeof(uint8_t) * UartDbgTxBuf->Length);
+		if (UartDbgTxBuf->data == NULL) return result;
 
-        UartDbg->TxBuf = (uint8_t*) calloc(DBGUART_TXBUF_SIZE, sizeof(uint8_t));
-        if (UartDbg->TxBuf == NULL)
-        	return false;
-        UartDbg->TxBufProcIndex = 0;
-        UartDbg->TxBufUnprocIndex = 0;
-        UartDbg->TxBufLength = DBGUART_TXBUF_SIZE;
+		UartDbgTxBuf->IndexProc = 0;
+		UartDbgTxBuf->IndexUnproc = 0;
+		UartDbgRxBuf->IndexProc = 0;
+		UartDbgRxBuf->IndexUnproc = 0;
 
-        fUart_Init(UartDbg);
+		UartStruct->nPins = 2;
+		UartStruct->GpioPin = malloc(sizeof(uint32_t) * UartStruct->nPins);
+		if (UartStruct->GpioPin == NULL) return result;
+		UartStruct->GpioPort = malloc(sizeof(uint32_t) * UartStruct->nPins);
+		if (UartStruct->GpioPort == NULL) return result;
+		UartStruct->GpioCurrent = malloc(sizeof(uint32_t) * UartStruct->nPins);
+		if (UartStruct->GpioCurrent == NULL) return result;
+		UartStruct->GpioType = malloc(sizeof(uint32_t) * UartStruct->nPins);
+		if (UartStruct->GpioType == NULL) return result;
+		UartStruct->GpioAlternateFunction = malloc(sizeof(uint32_t) * UartStruct->nPins);
+		if (UartStruct->GpioAlternateFunction == NULL) return result;
 
-        return true;
-    default:
-    	return false;
-    }
+		UartStruct->GpioPin[0] = EKTM4C123GXL_UARTDBG_RX_PIN;
+		UartStruct->GpioPort[0] = EKTM4C123GXL_UARTDBG_RX_PORT;
+		UartStruct->GpioCurrent[0] = EKTM4C123GXL_UARTDBG_RX_CURRENT;
+		UartStruct->GpioType[0] = EKTM4C123GXL_UARTDBG_RX_TYPE;
+		UartStruct->GpioAlternateFunction[0] = EKTM4C123GXL_UARTDBG_RX_AF;
+
+		UartStruct->GpioPin[1] = EKTM4C123GXL_UARTDBG_TX_PIN;
+		UartStruct->GpioPort[1] = EKTM4C123GXL_UARTDBG_TX_PORT;
+		UartStruct->GpioCurrent[1] = EKTM4C123GXL_UARTDBG_TX_CURRENT;
+		UartStruct->GpioType[1] = EKTM4C123GXL_UARTDBG_TX_TYPE;
+		UartStruct->GpioAlternateFunction[1] = EKTM4C123GXL_UARTDBG_TX_AF;
+
+		UartStruct->Module = EKTM4C123GXL_UARTDBG_MODULE;
+		UartStruct->WordBits = EKTM4C123GXL_UARTDBG_WORD_BITS;
+		UartStruct->StopBits = EKTM4C123GXL_UARTDBG_STOP_BITS;
+		UartStruct->ClockSource = EKTM4C123GXL_UARTDBG_CLOCKSOURCE;
+		UartStruct->Parity = EKTM4C123GXL_UARTDBG_PARITY;
+		UartStruct->BaudRate = EKTM4C123GXL_UARTDBG_BAUDRATE;
+
+		UartClass->IntInit(UartStruct, GpioClass, FUART_INT_RECEIVE, ektm4c123gxl_UartDbg_Irq);
+
+		free(UartStruct->GpioPin);
+		free(UartStruct->GpioPort);
+		free(UartStruct->GpioCurrent);
+		free(UartStruct->GpioType);
+		free(UartStruct->GpioAlternateFunction);
+		free(UartStruct);
+
+		result = EKTM4C123GXL_STATUS_ON;
+		break;
+	}
+
+	return result;
 }
 
 /*
- * Interrupt Service Routine for the UART Debug interface.
+ * IRQ Handler for the UART DBG.
  */
 
-void brd_UartDbgISR (void)
+static void ektm4c123gxl_UartDbg_Irq (void)
 {
-	fUart_IRQHandler(UartDbg);
+	uint32_t IntVal;
+
+	IntVal = UartClass->IntGet(EKTM4C123GXL_UARTDBG_MODULE, FUART_INT_RECEIVE | FUART_INT_TRANSMIT, EKTM4C123GXL_STATUS_ON);
+
+	if (IntVal & FUART_INT_RECEIVE)
+	{
+	    UartDbgRxBuf->data[UartDbgRxBuf->IndexUnproc++] = UartClass->ReadByte(EKTM4C123GXL_UARTDBG_MODULE);
+
+	    if (UartDbgRxBuf->IndexUnproc >= UartDbgRxBuf->Length)
+	        UartDbgRxBuf->IndexUnproc = 0;
+
+	    UartClass->IntClear(EKTM4C123GXL_UARTDBG_MODULE, FUART_INT_RECEIVE);
+	}
+	if (IntVal & FUART_INT_TRANSMIT)
+	{
+	    if (UartDbgTxBuf->IndexUnproc != UartDbgTxBuf->IndexProc)
+	    {
+	        UartClass->SendByte(EKTM4C123GXL_UARTDBG_MODULE, UartDbgTxBuf->data[UartDbgTxBuf->IndexProc++]);
+
+            if (UartDbgTxBuf->IndexProc >= UartDbgTxBuf->Length)
+                UartDbgTxBuf->IndexProc = 0;
+	    }
+	    else
+	    {
+            UartClass->IntStatus(EKTM4C123GXL_UARTDBG_MODULE, FUART_INT_TRANSMIT, EKTM4C123GXL_STATUS_OFF);
+	    }
+
+        UartClass->IntClear(EKTM4C123GXL_UARTDBG_MODULE, FUART_INT_TRANSMIT);
+	}
 }
 
 /*
- * Sends data over the UART interface.
+ * Sends data over the specified UART interface.
  */
 
-void brd_UartSend (uint8_t UARTx, const uint8_t* data)
+uint8_t ektm4c123gxl_UART_SendString (uint8_t EKTM4C123GXL_UARTx, uint8_t* string)
 {
-    uint8_t length = 0;
+    uint8_t i = 1;
+    uint8_t result = EKTM4C123GXL_STATUS_OFF;
 
-    switch (UARTx)
+    switch (EKTM4C123GXL_UARTx)
     {
-    case DBGUART:
-        length = 0;
+    case EKTM4C123GXL_UART_DBG:
+        // Wait till previous transmission ends.
+        while (UartDbgTxBuf->IndexProc != UartDbgTxBuf->IndexUnproc);
 
-        while (*(data++))
-            length++;
-
-        fUart_BeginTransfer(UartDbg, data - length - 1, length);
-
-        break;
-    default:
+        while (string[i] != '\0')
+        {
+            UartDbgTxBuf->data[UartDbgTxBuf->IndexUnproc++] = string[i++];
 
 
+            if (UartDbgTxBuf->IndexUnproc >= UartDbgTxBuf->Length)
+                UartDbgTxBuf->IndexUnproc = 0;
+        }
+
+        UartClass->SendByte(EKTM4C123GXL_UARTDBG_MODULE, string[0]);
+        UartClass->IntStatus(EKTM4C123GXL_UARTDBG_MODULE, FUART_INT_TRANSMIT, EKTM4C123GXL_STATUS_ON);
+
+        result = EKTM4C123GXL_STATUS_ON;
         break;
     }
+
+    return result;
 }
 
 /*
  * Parses the data received on the specified UART interface.
  */
 
-void brd_UartParse (uint8_t UARTx)
+static void ektm4c123gxl_UART_Parse (uint8_t EKTM4C123GXL_UARTx)
 {
-    uint8_t RxBufIndex;
+    uint8_t RxBufIndexProc;
     uint8_t CmdIndex;
     uint8_t Cmd[20];
 
-    switch (UARTx)
+    switch (EKTM4C123GXL_UARTx)
     {
-    case DBGUART:
-        RxBufIndex = UartDbg->RxBufProcIndex;
+    case EKTM4C123GXL_UART_DBG:
+        RxBufIndexProc = UartDbgRxBuf->IndexProc;
         CmdIndex = 0;
-        memset(Cmd, 0x00, sizeof(Cmd) * sizeof(uint8_t));
 
-        while (RxBufIndex != UartDbg->RxBufUnprocIndex)
+        while (RxBufIndexProc != UartDbgRxBuf->IndexUnproc)
         {
-            if (CmdIndex < sizeof(Cmd) / sizeof(uint8_t))
+            if (CmdIndex < (sizeof(Cmd) / sizeof(uint8_t)))
             {
-                *(Cmd + CmdIndex) = *(UartDbg->RxBuf + RxBufIndex++);
-                if (RxBufIndex >= UartDbg->RxBufLength)
-                    RxBufIndex = 0;
+                Cmd[CmdIndex] = UartDbgRxBuf->data[RxBufIndexProc++];
+                if (RxBufIndexProc >= UartDbgRxBuf->Length)
+                    RxBufIndexProc = 0;
 
-                if (*(Cmd + CmdIndex) == DBGUART_CMD_DELIMITER)
+                if (Cmd[CmdIndex] == EKTM4C123GXL_UARTDBG_CMD_DELIMITER)
                 {
-                    if (!(strcmp((char*) Cmd, DBGUART_CMD_HELLO)))
+                    if (memcmp(Cmd, EKTM4C123GXL_UARTDBG_CMD_HELLO, sizeof(EKTM4C123GXL_UARTDBG_CMD_HELLO) - 1) == 0)
                     {
-                        brd_UartSend(DBGUART, DBGUART_CMD_HEY);
+                        ektm4c123gxl_UART_SendString(EKTM4C123GXL_UART_DBG, EKTM4C123GXL_UARTDBG_CMD_HEY);
                     } else {
-                        brd_UartSend(DBGUART, DBGUART_CMD_UNKNOWN);
+                        ektm4c123gxl_UART_SendString(EKTM4C123GXL_UART_DBG, EKTM4C123GXL_UARTDBG_CMD_UNKNOWN);
                     }
 
-                    UartDbg->RxBufProcIndex = RxBufIndex;
+                    UartDbgRxBuf->IndexProc = RxBufIndexProc;
                     CmdIndex = 0;
-                    memset(Cmd, 0x00, sizeof(Cmd) * sizeof(uint8_t));
                 }
                 else
                 {
@@ -410,9 +581,6 @@ void brd_UartParse (uint8_t UARTx)
         }
 
         break;
-    default:
-
-        break;
     }
 }
 
@@ -420,13 +588,12 @@ void brd_UartParse (uint8_t UARTx)
  * Causes a delay and stops the flow execution till it finishes.
  */
 
-void brd_delay (double sTime)
+static void ektm4c123gxl_Delay (double sTime)
 {
-    fTim_Mod Tim_Mod = {.Module = MOD_TIM0, .Type = TYPE_ONE_SHOT_DOWN, .sTime = sTime, .Int = INT_NONE};
-
-    fTim_Init(&Tim_Mod);
-
-    while (!(fTim_IsTimeout(&Tim_Mod)));
+    TimerClass->Init(FTIMER_MODULE_0, sTime, FTIMER_TYPE_ONE_SHOT_DOWN);
+    while (TimerClass->IntTest(FTIMER_MODULE_0, FTIMER_INT_TIMEOUT, FTIMER_STATUS_OFF) == FTIMER_STATUS_OFF);
+    TimerClass->IntClear(FTIMER_MODULE_0, FTIMER_INT_TIMEOUT);
+    TimerClass->DeInit(FTIMER_MODULE_0);
 
 }
 
@@ -434,131 +601,54 @@ void brd_delay (double sTime)
  * Initialize the RFID interface.
  */
 
-bool brd_RfidHwInit (void)
+static uint8_t ektm4c123gxl_SPI_Init (uint8_t EKTM4C123GXL_SPIx)
 {
-    uint8_t i;
+    fSpi_Struct* InitStruct;
+    uint8_t result = EKTM4C123GXL_STATUS_OFF;
 
-    SpiRfid = (fSpi_Mod*) calloc(1, sizeof(fSpi_Mod));
-    if (SpiRfid == (fSpi_Mod*) NULL)
-        return false;
-
-    SpiRfid->nPins = 4;
-    SpiRfid->Pins = (fGpio_Pin**) calloc(SpiRfid->nPins, sizeof(fGpio_Pin*));
-    if (SpiRfid->Pins == (fGpio_Pin**) NULL)
-        return false;
-
-    for (i = 0; i < SpiRfid->nPins; i++)
+    switch (EKTM4C123GXL_SPIx)
     {
-        (*(SpiRfid->Pins + i)) = (fGpio_Pin*) calloc(1, sizeof(fGpio_Pin));
-        if ((*(SpiRfid->Pins + i)) == (fGpio_Pin*) NULL)
-            return false;
-        (*(SpiRfid->Pins + i))->Type = TYPE_PP_PD;
-        (*(SpiRfid->Pins + i))->Direction = DIR_HW;
-        (*(SpiRfid->Pins + i))->Current = CURR_2MA;
-    }
+    case EKTM4C123GXL_SPI_RFID:
+    	InitStruct = fSpi_CreateInitStruct(4);
+    	if (InitStruct == NULL)
+    		return result;
 
-    (*(SpiRfid->Pins + 0))->Pin = SPIRFID_MISO_PIN;
-    (*(SpiRfid->Pins + 0))->Port = SPIRFID_MISO_PORT;
-    (*(SpiRfid->Pins + 0))->AlternateFunction = SPIRFID_MISO_AF;
+    	InitStruct->Module = EKTM4C123GXL_SPIRFID_MODULE;
+    	InitStruct->Mode = EKTM4C123GXL_SPIRFID_MODE;
+    	InitStruct->Protocol = EKTM4C123GXL_SPIRFID_PROTOCOL;
+    	InitStruct->DataWidth = EKTM4C123GXL_SPIRFID_DATA_WIDTH;
+    	InitStruct->ClockSource = EKTM4C123GXL_SPIRFID_CLOCK_SOURCE;
+    	InitStruct->BitRate = EKTM4C123GXL_SPIRFID_BITRATE;
 
-    (*(SpiRfid->Pins + 1))->Pin = SPIRFID_MOSI_PIN;
-    (*(SpiRfid->Pins + 1))->Port = SPIRFID_MOSI_PORT;
-    (*(SpiRfid->Pins + 1))->AlternateFunction = SPIRFID_MOSI_AF;
+    	InitStruct->GpioPin[0] = EKTM4C123GXL_SPIRFID_MISO_PIN;
+    	InitStruct->GpioPort[0] = EKTM4C123GXL_SPIRFID_MISO_PORT;
+    	InitStruct->GpioCurrent[0] = EKTM4C123GXL_SPIRFID_MISO_CURRENT;
+    	InitStruct->GpioType[0] = EKTM4C123GXL_SPIRFID_MISO_TYPE;
+    	InitStruct->GpioAlternateFunction[0] = EKTM4C123GXL_SPIRFID_MISO_AF;
 
-    (*(SpiRfid->Pins + 2))->Pin = SPIRFID_CLK_PIN;
-    (*(SpiRfid->Pins + 2))->Port = SPIRFID_CLK_PORT;
-    (*(SpiRfid->Pins + 2))->AlternateFunction = SPIRFID_CLK_AF;
+    	InitStruct->GpioPin[1] = EKTM4C123GXL_SPIRFID_MOSI_PIN;
+    	InitStruct->GpioPort[1] = EKTM4C123GXL_SPIRFID_MOSI_PORT;
+    	InitStruct->GpioCurrent[1] = EKTM4C123GXL_SPIRFID_MOSI_CURRENT;
+    	InitStruct->GpioType[1] = EKTM4C123GXL_SPIRFID_MOSI_TYPE;
+    	InitStruct->GpioAlternateFunction[1] = EKTM4C123GXL_SPIRFID_MOSI_AF;
 
-    (*(SpiRfid->Pins + 3))->Pin = SPIRFID_NSS_PIN;
-    (*(SpiRfid->Pins + 3))->Port = SPIRFID_NSS_PORT;
-    (*(SpiRfid->Pins + 3))->AlternateFunction = SPIRFID_NSS_AF;
-    (*(SpiRfid->Pins + 3))->Type = TYPE_PP_PU;
+    	InitStruct->GpioPin[2] = EKTM4C123GXL_SPIRFID_NSS_PIN;
+    	InitStruct->GpioPort[2] = EKTM4C123GXL_SPIRFID_NSS_PORT;
+    	InitStruct->GpioCurrent[2] = EKTM4C123GXL_SPIRFID_NSS_CURRENT;
+    	InitStruct->GpioType[2] = EKTM4C123GXL_SPIRFID_NSS_TYPE;
+    	InitStruct->GpioAlternateFunction[2] = EKTM4C123GXL_SPIRFID_NSS_AF;
 
-    SpiRfid->ClockSource = FSPI_CLK_SYSTEM;
-    SpiRfid->DataWidth = 16;
-    SpiRfid->Mode = MODE_MASTER;
-    SpiRfid->BitRate = 50000;
-    SpiRfid->Module = SPI_MOD0;
-    SpiRfid->Protocol = PROT_POL0_PHA0;
-    SpiRfid->Int = INT_NONE;
-    fSpi_Init(SpiRfid);
+    	InitStruct->GpioPin[3] = EKTM4C123GXL_SPIRFID_CLK_PIN;
+    	InitStruct->GpioPort[3] = EKTM4C123GXL_SPIRFID_CLK_PORT;
+    	InitStruct->GpioCurrent[3] = EKTM4C123GXL_SPIRFID_CLK_CURRENT;
+    	InitStruct->GpioType[3] = EKTM4C123GXL_SPIRFID_CLK_TYPE;
+    	InitStruct->GpioAlternateFunction[3] = EKTM4C123GXL_SPIRFID_CLK_AF;
 
-    RstRfid = calloc(1, sizeof(fGpio_Pin));
-    if (RstRfid == NULL)
-        return 1;
+    	SpiClass->Init(InitStruct, GpioClass);
 
-    RstRfid->Pin = SPIRFID_RST_PIN;
-    RstRfid->Port = SPIRFID_RST_PORT;
-    RstRfid->Current = CURR_2MA;
-    RstRfid->Direction = DIR_OUT;
-    RstRfid->Type = TYPE_PP_PU;
-    fGpio_Init(RstRfid);
+		fSpi_DestroyInitStruct(InitStruct);
 
-    return true;
-}
-
-/*
- * Function to write an address.
- */
-
-void brd_RfidWriteAddress (uint8_t address, uint8_t value)
-{
-    // SPI fifo gets cleared by reading the byte.
-    uint32_t a = (address << 8) | value;
-    uint32_t b = 0;
-
-    fSpi_SendReceive(SpiRfid, a, &b);
-}
-
-/*
- * Function to read an address.
- */
-
-void brd_RfidReadAddress (uint8_t address, uint8_t* value)
-{
-    // Send a random character to generate the clock pulses.
-    // Send 0x80, it equals read address 0x00 on the device.
-    uint32_t a = (address << 8) | 0x00;
-    uint32_t b = 0;
-
-    fSpi_SendReceive(SpiRfid, a, &b);
-
-    *value = (uint8_t) (b & 0x000000FF);
-}
-
-/*
- * Manages the reset pin on the RFID device.
- */
-
-void brd_RfidRstControl (uint8_t status)
-{
-    if (status)
-    {
-        fGpio_setHigh(RstRfid);
-    } else {
-        fGpio_setLow(RstRfid);
-    }
-}
-
-/*
- * Initializes the RFID device completely.
- */
-
-bool brd_RfidInit (void)
-{
-    RfidDev = calloc(1, sizeof(mfrc522_Mod));
-    if (RfidDev == NULL)
-        return false;
-
-    RfidDev->Delay = brd_delay;
-    RfidDev->HwInit = brd_RfidHwInit;
-    RfidDev->RstCtrl = brd_RfidRstControl;
-    RfidDev->WriteAddress = brd_RfidWriteAddress;
-    RfidDev->ReadAddress = brd_RfidReadAddress;
-
-    mfrc522_Init(RfidDev);
-
-    return true;
+    	result = EKTM4C123GXL_STATUS_ON;
 }
 
 void brd_RfidTest (void)
