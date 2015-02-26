@@ -83,5 +83,7 @@ int main (void)
 	while (1)
 	{
 	    board->UART_Parse(EKTM4C123GXL_UART_DBG);
+	    board->Delay(2);
+	    board->LED_Toggle(EKTM4C123GXL_LEDB);
 	}
 }

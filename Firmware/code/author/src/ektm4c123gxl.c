@@ -88,6 +88,7 @@ fGpio_Class* GpioClass;
 fUart_Class* UartClass;
 ektm4c123gxl_CircularBuffer* UartDbgTxBuf;
 ektm4c123gxl_CircularBuffer* UartDbgRxBuf;
+fTim_Class* TimerClass;
 
 /* Private function prototypes -----------------------------------------------*/
 static void ektm4c123gxl_LED_Init (uint8_t LEDx);
@@ -106,6 +107,8 @@ static uint8_t ektm4c123gxl_UART_IntInit (uint8_t EKTM4C123GXL_UARTx);
 uint8_t ektm4c123gxl_UART_SendString (uint8_t EKTM4C123GXL_UARTx, uint8_t* string);
 static void ektm4c123gxl_UART_Parse (uint8_t EKTM4C123GXL_UARTx);
 static void ektm4c123gxl_UartDbg_Irq (void);
+
+static void ektm4c123gxl_Delay (double sTime);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -127,6 +130,10 @@ ektm4c123gxl_Class* ektm4c123gxl_CreateClass (void)
     if (UartClass == NULL)
     	return NULL;
 
+    TimerClass = fTim_CreateClass();
+    if (TimerClass == NULL)
+        return NULL;
+
     temp->LED_Init = ektm4c123gxl_LED_Init;
     temp->LED_Off = ektm4c123gxl_LED_Off;
     temp->LED_On = ektm4c123gxl_LED_On;
@@ -142,6 +149,8 @@ ektm4c123gxl_Class* ektm4c123gxl_CreateClass (void)
     temp->UART_IntInit = ektm4c123gxl_UART_IntInit;
     temp->UART_SendString = ektm4c123gxl_UART_SendString;
     temp->UART_Parse = ektm4c123gxl_UART_Parse;
+
+    temp->Delay = ektm4c123gxl_Delay;
 
     return temp;
 }
@@ -506,12 +515,11 @@ static void ektm4c123gxl_UART_Parse (uint8_t EKTM4C123GXL_UARTx)
  * Causes a delay and stops the flow execution till it finishes.
  */
 
-void brd_delay (double sTime)
+static void ektm4c123gxl_Delay (double sTime)
 {
-    fTim_Mod Tim_Mod = {.Module = MOD_TIM0, .Type = TYPE_ONE_SHOT_DOWN, .sTime = sTime, .Int = INT_NONE};
-
-    fTim_Init(&Tim_Mod);
-
-    while (!(fTim_IsTimeout(&Tim_Mod)));
+    TimerClass->Init(FTIMER_MODULE_0, sTime, FTIMER_TYPE_ONE_SHOT_DOWN);
+    while (TimerClass->IntTest(FTIMER_MODULE_0, FTIMER_INT_TIMEOUT, FTIMER_STATUS_OFF) == FTIMER_STATUS_OFF);
+    TimerClass->IntClear(FTIMER_MODULE_0, FTIMER_INT_TIMEOUT);
+    TimerClass->DeInit(FTIMER_MODULE_0);
 
 }
