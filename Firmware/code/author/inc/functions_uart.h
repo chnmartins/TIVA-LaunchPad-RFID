@@ -33,108 +33,100 @@
 
 typedef struct
 {
-    uint32_t    Pin;
-    uint32_t    Port;
-    uint32_t    AlternateFunction;
-    uint32_t    Current;
-    uint32_t    Type;
-} fUart_Pin;
+    uint32_t    Module;
+    uint32_t    WordBits;
+    uint32_t    StopBits;
+    uint32_t    Parity;
+    uint32_t    ClockSource;
+    uint32_t	BaudRate;
+
+    uint32_t*	GpioPin;
+    uint32_t*	GpioPort;
+    uint32_t*	GpioCurrent;
+    uint32_t*	GpioType;
+    uint32_t*	GpioAlternateFunction;
+    uint8_t		nPins;
+} fUart_InitStruct;
 
 typedef struct
 {
-    uint32_t    Module;
-    fUart_Pin*   Rx;
-    fUart_Pin*   Tx;
-    uint32_t    Wlen;
-    uint32_t    Stop;
-    uint32_t    Parity;
-    uint32_t    ClockSource;
-    uint32_t    BaudRate;
-    uint32_t    Interrupts;
-    void (*IntIRQ) (void);
+	void (*Init) (fUart_InitStruct* InitStruct, fGpio_Class* GpioClass);
+	void (*SendByte) (uint32_t FUART_MODULEx, uint8_t byte);
+	void (*SendBytes) (uint32_t FUART_MODULEx, uint8_t* bytes, uint8_t length);
+	uint8_t (*ReadByte) (uint32_t FUART_MODULEx);
 
-    uint8_t*     TxBuf;
-    uint8_t		 TxBufLength;
-    uint8_t		 TxBufProcIndex;
-    uint8_t      TxBufUnprocIndex;
+	void (*IntInit) (fUart_InitStruct* InitStruct, fGpio_Class* GpioClass, uint32_t FUART_INTx, void (*UART_IRQ) (void));
+	uint8_t (*IntTest) (uint32_t FUART_MODULEx, uint32_t FUART_INTx, uint8_t OnlyMaskedInt);
+	uint32_t (*IntGet) (uint32_t FUART_MODULEx, uint32_t FUART_INTx, uint8_t OnlyMaskedInt);
+	void (*IntStatus) (uint32_t FUART_MODULEx, uint32_t FUART_INTx, uint8_t FUART_STATUSx);
+	void (*IntClear) (uint32_t FUART_MODULEx, uint32_t FUART_INTx);
 
-    uint8_t* 	 RxBuf;
-    uint8_t		 RxBufLength;
-    uint8_t		 RxBufProcIndex;
-    uint8_t      RxBufUnprocIndex;
-} fUart_Mod;
+} fUart_Class;
 
 /* Exported constants --------------------------------------------------------*/
-#define MOD_UART0   UART0_BASE
-#define MOD_UART1   UART1_BASE
-#define MOD_UART2   UART2_BASE
-#define MOD_UART3   UART3_BASE
-#define MOD_UART4   UART4_BASE
-#define MOD_UART5   UART5_BASE
-#define MOD_UART6   UART6_BASE
-#define MOD_UART7   UART7_BASE
+#define FUART_MODULE_0   		UART0_BASE
+#define FUART_MODULE_1   		UART1_BASE
+#define FUART_MODULE_2   		UART2_BASE
+#define FUART_MODULE_3   		UART3_BASE
+#define FUART_MODULE_4   		UART4_BASE
+#define FUART_MODULE_5   		UART5_BASE
+#define FUART_MODULE_6   		UART6_BASE
+#define FUART_MODULE_7   		UART7_BASE
 
-#define WLEN_EIGTH  UART_CONFIG_WLEN_8
-#define WLEN_SEVEN  UART_CONFIG_WLEN_7
-#define WLEN_SIX    UART_CONFIG_WLEN_6
-#define WLEN_FIVE   UART_CONFIG_WLEN_5
+#define FUART_WORD_BITS_EIGTH  		UART_CONFIG_WLEN_8
+#define FUART_WORD_BITS_SEVEN  		UART_CONFIG_WLEN_7
+#define FUART_WORD_BITS_SIX    		UART_CONFIG_WLEN_6
+#define FUART_WORD_BITS_FIVE   		UART_CONFIG_WLEN_5
 
-#define STOP_ONE    UART_CONFIG_STOP_ONE
-#define STOP_TWO    UART_CONFIG_STOP_TWO
+#define FUART_STOP_BITS_ONE    				UART_CONFIG_STOP_ONE
+#define FUART_STOP_BITS_TWO    				UART_CONFIG_STOP_TWO
 
-#define PAR_NONE    UART_CONFIG_PAR_NONE
-#define PAR_EVEN    UART_CONFIG_PAR_EVEN
-#define PAR_ODD     UART_CONFIG_PAR_ODD
-#define PAR_ONE     UART_CONFIG_PAR_ONE
-#define PAR_ZERO    UART_CONFIG_PAR_ZERO
+#define FUART_PARITY_NONE    UART_CONFIG_PAR_NONE
+#define FUART_PARITY_EVEN    UART_CONFIG_PAR_EVEN
+#define FUART_PARITY_ODD     UART_CONFIG_PAR_ODD
+#define FUART_PARITY_ONE     UART_CONFIG_PAR_ONE
+#define FUART_PARITY_ZERO    UART_CONFIG_PAR_ZERO
 
-#define CLK_SYSTEM      UART_CLOCK_SYSTEM
-#define CLK_INTERNAL    UART_CLOCK_PIOSC
+#define FUART_CLOCK_SOURCE_SYSTEM      UART_CLOCK_SYSTEM
+#define FUART_CLOCK_SOURCE_PIOSC    UART_CLOCK_PIOSC
 
-#define BR_110          110
-#define BR_300          300
-#define BR_600          600
-#define BR_1200         1200
-#define BR_2400         2400
-#define BR_4800         4800
-#define BR_9600         9600
-#define BR_14400        14400
-#define BR_19200        19200
-#define BR_38400        38400
-#define BR_57600        57600
-#define BR_115200       115200
-#define BR_230400       230400
-#define BR_460800       460800
-#define BR_921600       921600
+#define FUART_BAUDRATE_110          110
+#define FUART_BAUDRATE_300          300
+#define FUART_BAUDRATE_600          600
+#define FUART_BAUDRATE_1200         1200
+#define FUART_BAUDRATE_2400         2400
+#define FUART_BAUDRATE_4800         4800
+#define FUART_BAUDRATE_9600         9600
+#define FUART_BAUDRATE_14400        14400
+#define FUART_BAUDRATE_19200        19200
+#define FUART_BAUDRATE_38400        38400
+#define FUART_BAUDRATE_57600        57600
+#define FUART_BAUDRATE_115200       115200
+#define FUART_BAUDRATE_230400       230400
+#define FUART_BAUDRATE_460800       460800
+#define FUART_BAUDRATE_921600       921600
 
-#define INT_NONE                0
-#define INT_9BIT                UART_INT_9BIT
-#define INT_OVERRUN_ERROR       UART_INT_OE
-#define INT_BREAK_ERROR         UART_INT_BE
-#define INT_PARITY_ERROR        UART_INT_PE
-#define INT_FRAMING_ERROR       UART_INT_FE
-#define INT_RECEIVE_TIMEOUT     UART_INT_RT
-#define INT_TRANSMIT            UART_INT_TX
-#define INT_RECEIVE             UART_INT_RX
-#define INT_DSR                 UART_INT_DSR
-#define INT_DCD                 UART_INT_DCD
-#define INT_CTS                 UART_INT_CTS
-#define INT_RI                  UART_INT_RI
+#define FUART_INT_9BIT                UART_INT_9BIT
+#define FUART_INT_OVERRUN_ERROR       UART_INT_OE
+#define FUART_INT_BREAK_ERROR         UART_INT_BE
+#define FUART_INT_PARITY_ERROR        UART_INT_PE
+#define FUART_INT_FRAMING_ERROR       UART_INT_FE
+#define FUART_INT_RECEIVE_TIMEOUT     UART_INT_RT
+#define FUART_INT_TRANSMIT            UART_INT_TX
+#define FUART_INT_RECEIVE             UART_INT_RX
+#define FUART_INT_DSR                 UART_INT_DSR
+#define FUART_INT_DCD                 UART_INT_DCD
+#define FUART_INT_CTS                 UART_INT_CTS
+#define FUART_INT_RI                  UART_INT_RI
+
+#define FUART_STATUS_ON				 (0x01)
+#define FUART_STATUS_OFF			 (0x00)
 
 /* Exported macro ------------------------------------------------------------*/
 
 /* Exported functions --------------------------------------------------------*/
-void fUart_enableSysCtl (const fUart_Mod* Uart_Pin);
-void fUart_setPins (const fUart_Mod* Uart_Mod);
-void fUart_DeInit (const fUart_Mod* Uart_Mod);
-void fUart_setConfig (const fUart_Mod* Uart_Mod);
-void fUart_Start (const fUart_Mod* Uart_Mod);
-void fUart_Init (const fUart_Mod* Uart_Mod);
-void fUart_IntInit (const fUart_Mod* Uart_Mod);
-uint32_t fUart_IntGet (const fUart_Mod* Uart_Mod);
-void fUart_IRQHandler (fUart_Mod* Uart_Mod);
-bool fUart_BeginTransfer (fUart_Mod* Uart_Mod, const uint8_t* data, uint8_t length);
-
+fUart_Class* fUart_CreateClass (void);
+void fUart_DestroyClass (fUart_Class * class);
 
 #ifdef __cplusplus
 }
