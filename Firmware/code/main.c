@@ -31,6 +31,7 @@
 /* Private macro -------------------------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
+static ektm4c123gxl_Class* board;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -46,42 +47,41 @@ void assert_failed (char* file, uint32_t line)
     }
 }
 
-void IRQHandler (void)
-{
-    uint8_t val = brd_PushButtonGetInt(PB1 | PB2);
-
-    if (val & PB1)
-    {
-        brd_LedInteract(LEDR, LED_ON);
-        brd_LedInteract(LEDG, LED_ON);
-    }
-    if (val & PB2)
-    {
-        brd_LedInteract(LEDR, LED_OFF);
-        brd_LedInteract(LEDG, LED_OFF);
-    }
-}
-
 /*
  * Main function.
  */
 
 int main (void)
 {
-    brd_LedInit(LEDG | LEDR | LEDB);
-    brd_PushButtonInit(PB1 | PB2);
-    brd_PushButtonInitInt(PB1 | PB2, IRQHandler);
+    board = ektm4c123gxl_CreateClass();
 
-    brd_LedInteract(LEDG | LEDR | LEDB, LED_OFF);
+    board->LED_Init(EKTM4C123GXL_LEDB | EKTM4C123GXL_LEDG | EKTM4C123GXL_LEDR);
+    board->PB_Init(EKTM4C123GXL_PB1 | EKTM4C123GXL_PB2);
+    board->UART_IntInit(EKTM4C123GXL_UART_DBG);
 
-    brd_UartInit(DBGUART);
+    board->LED_Off(EKTM4C123GXL_LEDB | EKTM4C123GXL_LEDG | EKTM4C123GXL_LEDR);
 
-    brd_RfidInit();
+    board->Delay(0.2);
+    board->LED_Toggle(EKTM4C123GXL_LEDR);
+    board->Delay(0.2);
+    board->LED_Toggle(EKTM4C123GXL_LEDB);
+    board->Delay(0.2);
+    board->LED_Toggle(EKTM4C123GXL_LEDG);
+    board->Delay(0.2);
+    board->LED_Toggle(EKTM4C123GXL_LEDR);
+    board->Delay(0.2);
+    board->LED_Toggle(EKTM4C123GXL_LEDB);
+    board->Delay(0.2);
+    board->LED_Toggle(EKTM4C123GXL_LEDG);
+
+    board->UART_SendString(EKTM4C123GXL_UART_DBG, "I'm here and I work properly.\r\n");
 
 	while (1)
 	{
-	    brd_UartParse(DBGUART);
-	    brd_delay(1);
-	    brd_LedInteract(LEDR, LED_TOGGLE);
+	    board->UART_Parse(EKTM4C123GXL_UART_DBG);
+	    if (board->PB_Read(EKTM4C123GXL_PB1) == EKTM4C123GXL_STATUS_ON)
+	    	board->LED_On(EKTM4C123GXL_LEDR);
+	    else
+	    	board->LED_Off(EKTM4C123GXL_LEDR);
 	}
 }

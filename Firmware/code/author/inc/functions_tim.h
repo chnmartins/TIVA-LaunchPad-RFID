@@ -27,43 +27,41 @@
 #include "timer.h"
 
 /* Exported types ------------------------------------------------------------*/
-typedef struct
-{
-    uint32_t    Module;
-    uint32_t    Type;
-    double      sTime;
-    uint32_t    Int;
-    void (*IntIRQ) (void);
-} fTim_Mod;
+typedef struct {
+    void (*Init) (uint32_t FTIMER_MODULEx, double time, uint32_t FTIMER_TYPEx);
+    void (*IntInit) (uint32_t FTIMER_MODULEx, double time, uint32_t FTIMER_TYPEx, uint32_t FTIMER_INTx, void (*TIMER_IRQ) (void));
+    void (*DeInit) (uint32_t FTIMER_MODULEx);
+    uint32_t (*IntGet) (uint32_t FTIMER_MODULEx, uint8_t FTIMER_STATUSx);
+    uint8_t (*IntTest) (uint32_t FTIMER_MODULEx, uint32_t FTIMER_INTx, uint8_t FTIMER_STATUSx);
+    void (*IntStatus) (uint32_t FTIMER_MODULEx, uint32_t FTIMER_INTx, uint8_t FTIMER_STATUSx);
+    void (*IntClear) (uint32_t FTIMER_MODULEx, uint32_t FTIMER_INTx);
+} fTim_Class;
 
 /* Exported constants --------------------------------------------------------*/
-#define MOD_TIM0    WTIMER0_BASE
-#define MOD_TIM1    WTIMER1_BASE
-#define MOD_TIM2    WTIMER2_BASE
-#define MOD_TIM3    WTIMER3_BASE
-#define MOD_TIM4    WTIMER4_BASE
-#define MOD_TIM5    WTIMER5_BASE
+#define FTIMER_MODULE_0    WTIMER0_BASE
+#define FTIMER_MODULE_1    WTIMER1_BASE
+#define FTIMER_MODULE_2    WTIMER2_BASE
+#define FTIMER_MODULE_3    WTIMER3_BASE
+#define FTIMER_MODULE_4    WTIMER4_BASE
+#define FTIMER_MODULE_5    WTIMER5_BASE
 
-#define TYPE_ONE_SHOT_UP        TIMER_CFG_ONE_SHOT_UP
-#define TYPE_ONE_SHOT_DOWN      TIMER_CFG_ONE_SHOT
-#define TYPE_PERIODIC_UP        TIMER_CFG_PERIODIC_UP
-#define TYPE_PERIODIC_DOWN      TIMER_CFG_PERIODIC
-#define TYPE_RTC                TIMER_CFG_RTC
+#define FTIMER_TYPE_ONE_SHOT_UP        TIMER_CFG_ONE_SHOT_UP
+#define FTIMER_TYPE_ONE_SHOT_DOWN      TIMER_CFG_ONE_SHOT
+#define FTIMER_TYPE_PERIODIC_UP        TIMER_CFG_PERIODIC_UP
+#define FTIMER_TYPE_PERIODIC_DOWN      TIMER_CFG_PERIODIC
+#define FTIMER_TYPE_RTC                TIMER_CFG_RTC
 
-#define INT_NONE            0
-#define INT_TIMEOUT         TIMER_TIMA_TIMEOUT
-// TODO: Complete with the rest of the interrupts here.
+#define FTIMER_INT_TIMEOUT         TIMER_TIMA_TIMEOUT
+// TODO: Fill with the rest of the interrupts.
+
+#define FTIMER_STATUS_ON            (0x01)
+#define FTIMER_STATUS_OFF           (0x00)
 
 /* Exported macro ------------------------------------------------------------*/
 
 /* Exported functions --------------------------------------------------------*/
-void fTim_enableSysCtl (const fTim_Mod* Tim_Mod);
-void fTim_setType (const fTim_Mod* Tim_Mod);
-void fTim_setTime (const fTim_Mod* Tim_Mod);
-void fTim_IntInit(const fTim_Mod* Tim_Mod);
-void fTim_Start(const fTim_Mod* Tim_Mod);
-void fTim_Init (const fTim_Mod* Tim_Mod);
-bool fTim_IsTimeout (const fTim_Mod* Tim_Mod);
+fTim_Class* fTim_CreateClass (void);
+void fTim_DestroyClass (fTim_Class* class);
 
 #ifdef __cplusplus
 }
