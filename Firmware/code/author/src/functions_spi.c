@@ -244,7 +244,7 @@ static void fSpi_DeInit (uint32_t FSPI_MODULEx)
 	ASSERT_PARAM(FSPI_ASSERT_SPI_MODULE(FSPI_MODULEx));
 #endif
 
-	fSpi_SysCtlStatus(FSPI_MODULEx, FSPI_STATUS_OFF);
+    //fSpi_SysCtlStatus(FSPI_MODULEx, FSPI_STATUS_OFF);
 	SSIIntUnregister(FSPI_MODULEx);
 	SSIDisable(FSPI_MODULEx);
 }
@@ -314,7 +314,7 @@ static void fSpi_Init (fSpi_Struct* InitStruct, fGpio_Class* GpioClass)
 	ASSERT_PARAM(FSPI_ASSERT_SPI_BITRATE(InitStruct->Mode, InitStruct->BitRate));
 #endif
 
-	fSpi_SysCtlStatus(InitStruct->Module, FSPI_STATUS_ON);
+    fSpi_SysCtlStatus(InitStruct->Module, FSPI_STATUS_ON);
 	fSpi_GpioConfig(GpioClass, InitStruct->GpioPin, InitStruct->GpioPort, InitStruct->GpioType, InitStruct->GpioCurrent, InitStruct->GpioAlternateFunction, InitStruct->nPins);
 	fSpi_DeInit(InitStruct->Module);
 	fSpi_Config(InitStruct->Module, InitStruct->Mode, InitStruct->Protocol, InitStruct->ClockSource, InitStruct->DataWidth, InitStruct->BitRate);
