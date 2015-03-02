@@ -34,6 +34,7 @@ typedef struct mfrc522_Class
 
      uint8_t (*Init) (struct mfrc522_Class* Class);
      uint8_t (*SelfTest) (struct mfrc522_Class* Class);
+     uint8_t (*FindTags) (struct mfrc522_Class* Class);
 } mfrc522_Class;
 
 /* Exported constants --------------------------------------------------------*/

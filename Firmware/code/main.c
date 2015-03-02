@@ -76,21 +76,16 @@ int main (void)
 
     board->mfrc522Class->Init(board->mfrc522Class);
     if (board->mfrc522Class->SelfTest(board->mfrc522Class) == MFRC522_STATUS_ON)
-        board->LED_On(EKTM4C123GXL_LEDG);
+        board->UART_SendString(EKTM4C123GXL_UART_DBG, "RFID SelfTest succesful.\r\n");
     else
-        board->LED_On(EKTM4C123GXL_LEDR);
-
-    board->Delay(2);
-    board->LED_Off(EKTM4C123GXL_LEDB | EKTM4C123GXL_LEDG | EKTM4C123GXL_LEDR);
-
-    board->UART_SendString(EKTM4C123GXL_UART_DBG, "I'm here and I work properly.\r\n");
+        board->UART_SendString(EKTM4C123GXL_UART_DBG, "RFID SelfTest failed.\r\n");
 
 	while (1)
 	{
-	    board->UART_Parse(EKTM4C123GXL_UART_DBG);
-	    if (board->PB_Read(EKTM4C123GXL_PB1) == EKTM4C123GXL_STATUS_ON)
-	    	board->LED_On(EKTM4C123GXL_LEDR);
+	    if (board->mfrc522Class->FindTags(board->mfrc522Class) == MFRC522_STATUS_ON)
+	        board->UART_SendString(EKTM4C123GXL_UART_DBG, "RFID tag found.\r\n");
 	    else
-	    	board->LED_Off(EKTM4C123GXL_LEDR);
+	        board->UART_SendString(EKTM4C123GXL_UART_DBG, "RFID tag not found.\r\n");
+	    board->Delay(1);
 	}
 }

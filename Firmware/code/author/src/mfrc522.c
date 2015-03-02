@@ -52,6 +52,13 @@ typedef enum
 
 typedef enum
 {
+    Frame_Short,
+    Frame_Standard,
+    Frame_Anticollision,
+} mfrc522_Frame;
+
+typedef enum
+{
 	Modem_Idle,
 	Modem_WaitForStartSend,
 	Modem_TransmitterWaitingForRFField,
@@ -298,7 +305,10 @@ static void mfrc522_InternalBufferRead (mfrc522_Class* class, uint8_t* buffer);
 static void mfrc522_FIFOWrite (mfrc522_Class* class, uint8_t* buffer, uint8_t bytestowrite);
 static void mfrc522_FIFOClear (mfrc522_Class* class);
 static uint8_t mfrc522_FIFOLevelGet (mfrc522_Class* class);
-static void mfrc522_FIFORead (mfrc522_Class* class, uint8_t* buffer, uint8_t bytestoread);
+static uint8_t mfrc522_FIFORead (mfrc522_Class* class, uint8_t* buffer, uint8_t bytestoread);
+static uint8_t mfrc522_FindTags (mfrc522_Class* class);
+static void mfrc522_TransmitterSetFrame (mfrc522_Class* class, mfrc522_Frame frame);
+static uint8_t mfrc522_CommandTransceive (mfrc522_Class* class, uint8_t* TxData, uint8_t TxDataLength, uint8_t* RxData, uint8_t* RxDataLength);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -314,6 +324,7 @@ mfrc522_Class* mfrc522_CreateClass (void (*Delay) (double), uint8_t (*HwInit) (v
 
     class->Init = mfrc522_Init;
     class->SelfTest = mfrc522_SelfTest;
+    class->FindTags = mfrc522_FindTags;
 
     class->__Delay = Delay;
     class->__HwInit = HwInit;
@@ -496,6 +507,92 @@ static void mfrc522_CommandExecute (mfrc522_Class* class, mfrc522_Command cmd)
 
     mfrc522_WriteRegister(class, MFRC522_ADDR_COMMAND, temp);
 }
+
+/*
+ * Executes the transceive command.
+ */
+
+static uint8_t mfrc522_CommandTransceive (mfrc522_Class* class, uint8_t* TxData, uint8_t TxDataLength, uint8_t* RxData, uint8_t* RxDataLength)
+{
+    uint8_t error = 0, result = MFRC522_STATUS_OFF;
+    uint16_t flag = 0;
+
+    *(RxDataLength) = 0;
+
+    mfrc522_FIFOClear(class);
+    mfrc522_FIFOWrite(class, TxData, TxDataLength);
+
+    mfrc522_CommandExecute(class, Command_Transceive);
+    mfrc522_TransmitterStart(class);
+
+    do
+    {
+        error = mfrc522_ErrorGet(class);
+        flag = mfrc522_IntGet(class) & (MFRC522_INT_RX | MFRC522_INT_TIMER);
+    } while ((!(error)) && (!(flag)));
+
+    if (flag & MFRC522_INT_RX)
+    {
+        *RxDataLength = mfrc522_FIFORead(class, RxData, 64);
+        result = MFRC522_STATUS_ON;
+    }
+
+    return result;
+}
+
+/*
+ * Tries to find tags in the area of operation.
+ */
+
+static uint8_t mfrc522_FindTags (mfrc522_Class* class)
+{
+    uint8_t data[10] = {0xFF};
+    uint8_t RxDataLength = 0;
+
+    mfrc522_SoftReset(class);
+
+    // Configure timer for auto and 50 ms.
+    mfrc522_TimerConfig(class, MFRC522_TIMER_OPT_AUTO);
+    mfrc522_TimerValues(class, 500, 677);
+
+    // Configure Antenna and receiver.
+    mfrc522_TransmitterModulation100ASK(class, MFRC522_STATUS_ON);
+    mfrc522_ReceiverStatus(class, MFRC522_STATUS_ON);
+    mfrc522_AntennaConfig(class, MFRC522_ANTENNA_OPT_TX2_INVERTED_WHEN_ON | MFRC522_ANTENNA_OPT_TX1_MODULATED | MFRC522_ANTENNA_OPT_TX2_MODULATED);
+
+    // Configure for short frame and initialization.
+    mfrc522_TransmitterSetFrame(class, Frame_Short);
+    mfrc522_TransmitterSpeedSet(class, Speed_106kBd);
+
+    data[0] = MFCommand_ReqA;
+
+    return mfrc522_CommandTransceive(class, data, 1, data, &RxDataLength);
+}
+
+
+/*
+ * Sets the appropiate format.
+ */
+
+static void mfrc522_TransmitterSetFrame (mfrc522_Class* class, mfrc522_Frame frame)
+{
+    switch (frame)
+    {
+    case Frame_Short:
+        mfrc522_TransmitterSetBits(class, 7);
+        mfrc522_ParityStatus(class, MFRC522_STATUS_OFF);
+        break;
+    case Frame_Standard:
+        mfrc522_TransmitterSetBits(class, 0);
+        mfrc522_ParityStatus(class, MFRC522_STATUS_ON);
+        break;
+    case Frame_Anticollision:
+        break;
+    default:
+        break;
+    }
+}
+
 
 /*
  * Performs a self test. How to perform a self reset can be found on the datasheet (Section 16.1.1).
@@ -871,7 +968,7 @@ static void mfrc522_TransmitterModulation100ASK (mfrc522_Class* class, uint8_t M
 		temp |= MFRC522_BMS_TXASK_FORCE100ASK_BIT;
 	else
 		temp &= ~(MFRC522_BMS_TXASK_FORCE100ASK_BIT);
-	mfrc522_WriteRegister(class, MFRC522_ADDR_TXMODE, temp);
+	mfrc522_WriteRegister(class, MFRC522_ADDR_TXASK, temp);
 }
 
 /*
@@ -1172,7 +1269,7 @@ static uint8_t mfrc522_FIFOLevelGet (mfrc522_Class* class)
  * Reads data from the FIFO.
  */
 
-static void mfrc522_FIFORead (mfrc522_Class* class, uint8_t* buffer, uint8_t bytestoread)
+static uint8_t mfrc522_FIFORead (mfrc522_Class* class, uint8_t* buffer, uint8_t bytestoread)
 {
     uint8_t FifoLevel = 0;
     uint8_t i = 0;
@@ -1186,4 +1283,6 @@ static void mfrc522_FIFORead (mfrc522_Class* class, uint8_t* buffer, uint8_t byt
         FifoLevel = mfrc522_FIFOLevelGet(class);
         i++;
     }
+
+    return i;
 }
