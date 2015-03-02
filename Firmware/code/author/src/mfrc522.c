@@ -104,6 +104,7 @@ typedef enum
 #define MFRC522_ADDR_TCOUNTERVALHI  (0x2E)
 #define MFRC522_ADDR_TCOUNTERVALLO  (0x2F)
 #define MFRC522_ADDR_AUTOTEST       (0x36)
+#define MFRC522_ADDR_VERSION        (0x37)
 
 // Bit masks
 #define MFRC522_BMS_COMMAND_COMMAND_BITS                    BITS(0x0F, 0)
@@ -218,6 +219,9 @@ typedef enum
 #define MFRC522_BMS_TXASK_FORCE100ASK_BIT				BIT(6)
 
 #define MFRC522_BMS_MFRX_PARITYDISABLE_BIT				BIT(4)
+
+#define MFRC522_BMS_VERSION_VERSION1                    (0x91)
+#define MFRC522_BMS_VERSION_VERSION2                    (0x92)
 
 // Other defines
 #define MFRC522_TIMER_OPT_AUTO                           (0x01)
@@ -516,33 +520,34 @@ static uint8_t mfrc522_SelfTest (mfrc522_Class* class)
                       0x5D, 0x48, 0x76, 0xD5, 0x71, 0x61, 0x21, 0xA9,
                       0x86, 0x96, 0x83, 0x38, 0xCF, 0x9D, 0x5B, 0x6D,
                       0xDC, 0x15, 0xBA, 0x3E, 0x7D, 0x95, 0x3B, 0x2F};
-    uint8_t temp;
+    uint8_t version = 0;
+    uint8_t temp = 0;
     uint8_t result = MFRC522_STATUS_OFF;
-
-    mfrc522_SoftReset(class);
 
     data = calloc(64, sizeof(uint8_t));
     if (data == NULL)
         return result;
 
+    mfrc522_ReadRegister(class, MFRC522_ADDR_VERSION, &temp);
+
+    if (temp == MFRC522_BMS_VERSION_VERSION1)
+        version = 1;
+    else if (temp == MFRC522_BMS_VERSION_VERSION2)
+        version = 2;
+
+    mfrc522_SoftReset(class);
     mfrc522_InternalBufferWrite(class, data);
-
-    mfrc522_ReadRegister(class, MFRC522_ADDR_AUTOTEST, &temp);
-    temp &= ~(MFRC522_BMS_AUTOTEST_SELFTEST_BITS);
-    temp |= MFRC522_BMS_AUTOTEST_SELFTEST_SELFTEST;
-    mfrc522_WriteRegister(class, MFRC522_ADDR_AUTOTEST, temp);
-
+    mfrc522_WriteRegister(class, MFRC522_ADDR_AUTOTEST, MFRC522_BMS_AUTOTEST_SELFTEST_SELFTEST);
     mfrc522_FIFOWrite(class, data, 1);
-
+    mfrc522_ReceiverStatus(class, MFRC522_STATUS_ON);
     mfrc522_CommandExecute(class, Command_CalcCrc);
-    class->__Delay(1);
-    while (mfrc522_CommandCurrent(class) != Command_Idle);
+    while (mfrc522_CommandCurrent(class) != Command_Idle)
 
     mfrc522_FIFORead(class, data, 64);
 
-    if (!(memcmp(data, V1, 64))) {
+    if ((version == 1) && (!(memcmp(data, V1, 64)))) {
         result = MFRC522_STATUS_ON;
-    } else if (!(memcmp(data, V2, 64))) {
+    } else if ((version == 2) && (!(memcmp(data, V2, 64)))) {
         result = MFRC522_STATUS_ON;
     }
 

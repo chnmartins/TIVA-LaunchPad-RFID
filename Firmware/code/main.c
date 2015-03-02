@@ -75,7 +75,13 @@ int main (void)
     board->LED_Toggle(EKTM4C123GXL_LEDG);
 
     board->mfrc522Class->Init(board->mfrc522Class);
-    board->mfrc522Class->SelfTest(board->mfrc522Class);
+    if (board->mfrc522Class->SelfTest(board->mfrc522Class) == MFRC522_STATUS_ON)
+        board->LED_On(EKTM4C123GXL_LEDG);
+    else
+        board->LED_On(EKTM4C123GXL_LEDR);
+
+    board->Delay(2);
+    board->LED_Off(EKTM4C123GXL_LEDB | EKTM4C123GXL_LEDG | EKTM4C123GXL_LEDR);
 
     board->UART_SendString(EKTM4C123GXL_UART_DBG, "I'm here and I work properly.\r\n");
 
