@@ -98,12 +98,15 @@ typedef enum
 #define MFRC522_ADDR_FIFOLEVEL      (0x0A)
 #define MFRC522_ADDR_CONTROL        (0x0C)
 #define	MFRC522_ADDR_BITFRAMING		(0x0D)
+#define MFRC522_ADDR_COLL			(0x0E)
 #define MFRC522_ADDR_MODE			(0x11)
 #define	MFRC522_ADDR_TXMODE			(0x12)
+#define MFRC522_ADDR_RXMODE			(0x13)
 #define MFRC522_ADDR_TXCONTROL		(0x14)
 #define MFRC522_ADDR_TXASK			(0x15)
 #define MFRC522_ADDR_DEMOD          (0x19)
 #define MFRC522_ADDR_MFRX			(0x1D)
+#define MFRC522_ADDR_RFCFG			(0x26)
 #define MFRC522_ADDR_TMODE          (0x2A)
 #define MFRC522_ADDR_TPRESCALERLO   (0x2B)
 #define MFRC522_ADDR_TRELOADHI      (0x2C)
@@ -206,6 +209,12 @@ typedef enum
 #define MFRC522_BMS_BITFRAMING_TXLASTBITS(x)				 BITS((x), 0)
 
 #define MFRC522_BMS_MODE_TXWAITRF_BIT						 BIT(5)
+#define MFRC522_BMS_MODE_MSBFIRST_BIT						 BIT(7)
+#define MFRC522_BMS_MODE_CRCPRESET_BITS						 BITS(0x03, 0)
+#define MFRC522_BMS_MODE_CRCPRESET_0000						 BITS(0x00, 0)
+#define MFRC522_BMS_MODE_CRCPRESET_6363						 BITS(0x01, 0)
+#define MFRC522_BMS_MODE_CRCPRESET_A671						 BITS(0x02, 0)
+#define MFRC522_BMS_MODE_CRCPRESET_FFFF						 BITS(0x03, 0)
 
 #define MFRC522_BMS_TXMODE_TXCRCEN_BIT						 BIT(7)
 #define MFRC522_BMS_TXMODE_TXSPEED_BITS						 BITS(0x07, 4)
@@ -229,6 +238,27 @@ typedef enum
 
 #define MFRC522_BMS_VERSION_VERSION1                    (0x91)
 #define MFRC522_BMS_VERSION_VERSION2                    (0x92)
+
+#define MFRC522_BMS_COLL_VALUESAFTERCOLL_BIT			BIT(7)
+#define MFRC522_BMS_COLL_COLLPOSNOTVALID_BIT			BIT(5)
+#define	MFRC522_BMS_COLL_COLLPOS_BITS					BITS(0x1F, 0)
+
+#define MFRC522_BMS_RXMODE_RXCRCEN_BIT					BIT(7)
+#define MFRC522_BMS_RXMODE_RXSPEED_BITS					BITS(0x07, 4)
+#define MFRC522_BMS_RXMODE_RXSPEED_106KBD				BITS(0x00, 4)
+#define MFRC522_BMS_RXMODE_RXSPEED_212KBD				BITS(0x01, 4)
+#define MFRC522_BMS_RXMODE_RXSPEED_424KBD				BITS(0x02, 4)
+#define MFRC522_BMS_RXMODE_RXSPEED_848KBD				BITS(0x03, 4)
+#define MFRC522_BMS_RXMODE_RXNOERR_BIT					BIT(3)
+#define MFRC522_BMS_RXMODE_RXMULTIPLE_BIT				BIT(2)
+
+#define MFRC522_BMS_RFCFG_RXGAIN_BITS					BITS(0x07, 4)
+#define MFRC522_BMS_RFCFG_RXGAIN_18DB					BITS(0x02, 4)
+#define MFRC522_BMS_RFCFG_RXGAIN_23DB					BITS(0x03, 4)
+#define MFRC522_BMS_RFCFG_RXGAIN_33DB					BITS(0x04, 4)
+#define MFRC522_BMS_RFCFG_RXGAIN_38DB					BITS(0x05, 4)
+#define MFRC522_BMS_RFCFG_RXGAIN_43DB					BITS(0x06, 4)
+#define MFRC522_BMS_RFCFG_RXGAIN_48DB					BITS(0x07, 4)
 
 // Other defines
 #define MFRC522_TIMER_OPT_AUTO                           (0x01)
@@ -263,6 +293,20 @@ typedef enum
 #define MFRC522_ERROR_CRC               (0x10)
 #define MFRC522_ERROR_PARITY            (0x20)
 #define MFRC522_ERROR_PROTOCOL          (0x40)
+
+#define MFRC522_RXGAIN_18DB				(MFRC522_BMS_RFCFG_RXGAIN_18DB)
+#define MFRC522_RXGAIN_23DB				(MFRC522_BMS_RFCFG_RXGAIN_23DB)
+#define MFRC522_RXGAIN_33DB				(MFRC522_BMS_RFCFG_RXGAIN_33DB)
+#define MFRC522_RXGAIN_38DB				(MFRC522_BMS_RFCFG_RXGAIN_38DB)
+#define MFRC522_RXGAIN_43DB				(MFRC522_BMS_RFCFG_RXGAIN_43DB)
+#define MFRC522_RXGAIN_48DB				(MFRC522_BMS_RFCFG_RXGAIN_48DB)
+
+#define MFRC522_STATUS_CRC_OK			(0x01)
+#define MFRC522_STATUS_CRC_READY		(0x02)
+#define MFRC522_STATUS_FIFO_HIGH		(0x04)
+#define MFRC522_STATUS_FIFO_LOW			(0x08)
+#define MFRC522_STATUS_IRQ_ON			(0x10)
+#define MFRC522_STATUS_TIMER_ON			(0x20)
 
 /* Private macro -------------------------------------------------------------*/
 #define BIT(n)          (1 << (n))
@@ -309,6 +353,8 @@ static uint8_t mfrc522_FIFORead (mfrc522_Class* class, uint8_t* buffer, uint8_t 
 static uint8_t mfrc522_FindTags (mfrc522_Class* class);
 static void mfrc522_TransmitterSetFrame (mfrc522_Class* class, mfrc522_Frame frame);
 static uint8_t mfrc522_CommandTransceive (mfrc522_Class* class, uint8_t* TxData, uint8_t TxDataLength, uint8_t* RxData, uint8_t* RxDataLength);
+static uint8_t mfrc522_ReceiverGetBits (mfrc522_Class* class);
+static uint8_t mfrc522_ReceiverGetCollision (mfrc522_Class* class);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -569,6 +615,222 @@ static uint8_t mfrc522_FindTags (mfrc522_Class* class)
     return mfrc522_CommandTransceive(class, data, 1, data, &RxDataLength);
 }
 
+/*
+ * Configures the CRC.
+ */
+
+status void mfrc522_CRCConfig (mfrc522_Class* class, uint8_t MFRC522_CRCx)
+{
+	uint8_t temp;
+
+	mfrc522_ReadRegister(class, MFRC522_ADDR_MODE, &temp);
+
+	if (MFRC522_CRCx & MFRC522_CRC_MSBFIRST)
+		temp |= MFRC522_BMS_MODE_MSBFIRST_BIT;
+	else
+		temp &= ~MFRC522_BMS_MODE_MSBFIRST_BIT;
+
+	temp &= ~MFRC522_BMS_MODE_CRCPRESET_BITS;
+	if (MFRC522_CRCx & MFRC522_CRC_PRESET_0000)
+		temp |= MFRC522_BMS_MODE_CRCPRESET_0000;
+	else if (MFRC522_CRCx & MFRC522_CRC_PRESET_6363)
+		temp |= MFRC522_BMS_MODE_CRCPRESET_6363;
+	else if (MFRC522_CRCx & MFRC522_CRC_PRESET_A671)
+		temp |= MFRC522_BMS_MODE_CRCPRESET_A671;
+	else if (MFRC522_CRCx & MFRC522_CRC_PRESET_FFFF)
+		temp |= MFRC522_BMS_MODE_CRCPRESET_FFFF;
+
+	mfrc522_WriteRegister(classs, MFRC522_ADDR_MODE, temp);
+}
+
+/*
+ * Returns the status bits.
+ */
+
+static uint8_t mfrc522_StatusGet (mfrc522_Class* class)
+{
+	uint8_t temp;
+	uint8_t result = 0;
+
+	mfrc522_ReadRegister(class, MFRC522_ADDR_STATUS1, &temp);
+	if (temp & MFRC522_BMS_STATUS1_CRCOK_BIT)
+		result |= MFRC522_STATUS_CRC_OK;
+	if (temp & MFRC522_BMS_STATUS1_CRCREADY_BIT)
+		result |= MFRC522_STATUS_CRC_READY;
+	if (temp & MFRC522_BMS_STATUS1_IRQ_BIT)
+		result |= MFRC522_STATUS_IRQ_ON;
+	if (temp & MFRC522_BMS_STATUS1_TRUNNING_BIT)
+		result |= MFRC522_STATUS_TIMER_ON;
+	if (temp & MFRC522_BMS_STATUS1_HIALERT_BIT)
+		result |= MFRC522_STATUS_FIFO_HIGH;
+	if (temp & MFRC522_BMS_STATUS1_LOALERT_BIT)
+		result |= MFRC522_STATUS_FIFO_LOW;
+
+	return result;
+}
+
+/*
+ * Enables or disables the CRC during reception.
+ */
+
+static void mfrc522_ReceiverCRCStatus (mfrc522_Class* class, uint8_t MFRC522_STATUSx)
+{
+	uint8_t temp;
+
+	mfrc522_ReadRegister(class, MFRC522_ADDR_RXMODE, &temp);
+	if (MFRC522_STATUSx == MFRC522_STATUS_ON)
+		temp |= MFRC522_BMS_RXMODE_RXCRCEN_BIT;
+	else
+		temp &= ~MFRC522_BMS_RXMODE_RXCRCEN_BIT;
+	mfrc522_WriteRegister(class, MFRC522_ADDR_RXMODE, temp);
+}
+
+/*
+ *
+ */
+
+static mfrc522_Speed mfrc522_ReceiverGetSpeed (mfrc522_Class* class)
+{
+	uint8_t temp;
+	mfrc522_Speed speed;
+
+	mfrc522_ReadRegister(class, MFRC522_ADDR_RXMODE, &temp);
+
+	temp &= MFRC522_BMS_RXMODE_RXSPEED_BITS;
+
+	switch (temp)
+	{
+	case MFRC522_BMS_RXMODE_RXSPEED_106KBD:
+		speed = Speed_106kBd;
+		break;
+	case MFRC522_BMS_RXMODE_RXSPEED_212KBD:
+		speed = Speed_212kBd;
+		break;
+	case MFRC522_BMS_RXMODE_RXSPEED_424KBD:
+		speed = Speed_424kBd;
+		break;
+	case MFRC522_BMS_RXMODE_RXSPEED_848KBD:
+		speed = Speed_848kBd;
+		break;
+	}
+
+	return speed;
+}
+
+/*
+ *
+ */
+
+static void mfrc522_ReceiverSetSpeed (mfrc522_Class* class, mfrc522_Speed speed)
+{
+	uint8_t temp;
+
+	mfrc522_ReadRegister(class, MFRC522_ADDR_RXMODE, &temp);
+
+	temp &= ~MFRC522_BMS_RXMODE_RXSPEED_BITS;
+
+	switch (speed)
+	{
+	case Speed_106kBd:
+		temp |= MFRC522_BMS_RXMODE_RXSPEED_106KBD;
+		break;
+	case Speed_212kBd:
+		temp |= MFRC522_BMS_RXMODE_RXSPEED_212KBD;
+		break;
+	case Speed_424kBd:
+		temp |= MFRC522_BMS_RXMODE_RXSPEED_424KBD;
+		break;
+	case Speed_848kBd:
+		temp |= MFRC522_BMS_RXMODE_RXSPEED_848KBD;
+		break;
+	}
+
+	mfrc522_WriteRegister(class, MFRC522_ADDR_RXMODE, temp);
+}
+
+
+/*
+ * Returns zero if there was no collisions, returns a positive value indicating collision at data bit index.
+ */
+
+static uint8_t mfrc522_ReceiverGetCollision (mfrc522_Class* class)
+{
+	uint8_t temp;
+
+	mfrc522_ReadRegister(class, MFRC522_ADDR_COLL, &temp);
+	if (!(temp & MFRC522_BMS_COLL_COLLPOSNOTVALID_BIT))
+	{
+		if (temp & MFRC522_BMS_COLL_COLLPOS_BITS)
+			return (temp & MFRC522_BMS_COLL_COLLPOS_BITS);
+
+		return 32;
+	}
+
+	return 0;
+}
+
+/*
+ * Gets the valid bits of the last received byte.
+ */
+
+static uint8_t mfrc522_ReceiverGetBits (mfrc522_Class* class)
+{
+	uint8_t temp;
+
+	mfrc522_ReadRegister(class, MFRC522_ADDR_CONTROL, &temp);
+	temp &= MFRC522_BMS_CONTROL_RXLASTBITS_BITS;
+	if (temp)
+		return temp;
+
+	return 8;
+}
+
+/*
+ * Sets the receiver to ignore data streams with less than 4 bits received, and the receiver remains active.
+ */
+
+static void mfrc522_ReceiverContinous (mfrc522_Class* class, uint8_t MFRC522_STATUSx)
+{
+	uint8_t temp;
+
+	mfrc522_ReadRegister(class, MFRC522_ADDR_RXMODE, &temp);
+	if (MFRC522_STATUSx == MFRC522_STATUS_ON)
+		temp |= MFRC522_BMS_RXMODE_RXMULTIPLE_BIT;
+	else
+		temp &= ~MFRC522_BMS_RXMODE_RXMULTIPLE_BIT;
+	mfrc522_WriteRegister(class, MFRC522_ADDR_RXMODE, temp);
+}
+
+/*
+ * Sets the receiver to receive data frames till user cancels it.
+ */
+
+static void mfrc522_ReceiverIgnoreInvalid (mfrc522_Class* class, uint8_t MFRC522_STATUSx)
+{
+	uint8_t temp;
+
+	mfrc522_ReadRegister(class, MFRC522_ADDR_RXMODE, &temp);
+	if (MFRC522_STATUSx == MFRC522_STATUS_ON)
+		temp |= MFRC522_BMS_RXMODE_RXNOERR_BIT;
+	else
+		temp &= ~MFRC522_BMS_RXMODE_RXNOERR_BIT;
+	mfrc522_WriteRegister(class, MFRC522_ADDR_RXMODE, temp);
+}
+
+
+/*
+ * Sets the antenna gain of the receiver.
+ */
+
+static void mfrc522_ReceiverAntennaGain (mfrc522_Class* class, uint8_t MFRC522_RXGAINx)
+{
+	uint8_t temp;
+
+	mfrc522_ReadRegister(class, MFRC522_ADDR_RFCFG, &temp);
+	temp &= ~MFRC522_BMS_RFCFG_RXGAIN_BITS;
+	temp |= MFRC522_RXGAINx;
+	mfrc522_WriteRegister(class, MFRC522_ADDR_RFCFG, temp);
+}
 
 /*
  * Sets the appropiate format.
