@@ -12,13 +12,18 @@ $(GEN_CMDS__FLAG) \
 "./code/tivaware/src/cpu.obj" \
 "./code/tivaware/src/gpio.obj" \
 "./code/tivaware/src/interrupt.obj" \
+"./code/tivaware/src/ssi.obj" \
 "./code/tivaware/src/sysctl.obj" \
+"./code/tivaware/src/timer.obj" \
 "./code/tivaware/src/uart.obj" \
 "./code/templates/src/C_SOURCE_TEMPLATE.obj" \
 "./code/main.obj" \
 "./code/author/src/ektm4c123gxl.obj" \
 "./code/author/src/functions_gpio.obj" \
+"./code/author/src/functions_spi.obj" \
+"./code/author/src/functions_tim.obj" \
 "./code/author/src/functions_uart.obj" \
+"./code/author/src/mfrc522.obj" \
 "../tm4c123gh6pm.cmd" \
 -l"libc.a" \
 
@@ -145,7 +150,7 @@ all: RFID\ Project.out
 RFID\ Project.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: ARM Linker'
-	"c:/ti/ccsv6/tools/compiler/arm_5.1.6/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 --abi=eabi -me -g --gcc --define=ccs="ccs" --define=PART_TM4C123GH6PM --display_error_number --diag_warning=225 --diag_wrap=off -z -m"RFID Project.map" --heap_size=512 --stack_size=0 -i"c:/ti/ccsv6/tools/compiler/arm_5.1.6/lib" -i"c:/ti/ccsv6/tools/compiler/arm_5.1.6/include" --reread_libs --warn_sections --display_error_number --diag_wrap=off --xml_link_info="RFID Project_linkInfo.xml" --rom_model -o "RFID Project.out" $(ORDERED_OBJS)
+	"c:/ti/ccsv6/tools/compiler/arm_5.1.6/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 --abi=eabi -me -g --gcc --define=ccs="ccs" --define=PART_TM4C123GH6PM --display_error_number --diag_warning=225 --diag_wrap=off -z -m"RFID Project.map" --heap_size=1024 --stack_size=1024 -i"c:/ti/ccsv6/tools/compiler/arm_5.1.6/lib" -i"c:/ti/ccsv6/tools/compiler/arm_5.1.6/include" --reread_libs --warn_sections --display_error_number --diag_wrap=off --xml_link_info="RFID Project_linkInfo.xml" --rom_model -o "RFID Project.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -158,8 +163,8 @@ RFID\ Project.hex: $(EXE_OUTPUTS)
 # Other Targets
 clean:
 	-$(RM) $(EXE_OUTPUTS__QUOTED)$(BIN_OUTPUTS__QUOTED)
-	-$(RM) "tm4c123gh6pm_startup_ccs.pp" "code\tivaware\src\cpu.pp" "code\tivaware\src\gpio.pp" "code\tivaware\src\interrupt.pp" "code\tivaware\src\sysctl.pp" "code\tivaware\src\uart.pp" "code\templates\src\C_SOURCE_TEMPLATE.pp" "code\main.pp" "code\author\src\ektm4c123gxl.pp" "code\author\src\functions_gpio.pp" "code\author\src\functions_uart.pp" 
-	-$(RM) "tm4c123gh6pm_startup_ccs.obj" "code\tivaware\src\cpu.obj" "code\tivaware\src\gpio.obj" "code\tivaware\src\interrupt.obj" "code\tivaware\src\sysctl.obj" "code\tivaware\src\uart.obj" "code\templates\src\C_SOURCE_TEMPLATE.obj" "code\main.obj" "code\author\src\ektm4c123gxl.obj" "code\author\src\functions_gpio.obj" "code\author\src\functions_uart.obj" 
+	-$(RM) "tm4c123gh6pm_startup_ccs.pp" "code\tivaware\src\cpu.pp" "code\tivaware\src\gpio.pp" "code\tivaware\src\interrupt.pp" "code\tivaware\src\ssi.pp" "code\tivaware\src\sysctl.pp" "code\tivaware\src\timer.pp" "code\tivaware\src\uart.pp" "code\templates\src\C_SOURCE_TEMPLATE.pp" "code\main.pp" "code\author\src\ektm4c123gxl.pp" "code\author\src\functions_gpio.pp" "code\author\src\functions_spi.pp" "code\author\src\functions_tim.pp" "code\author\src\functions_uart.pp" "code\author\src\mfrc522.pp" 
+	-$(RM) "tm4c123gh6pm_startup_ccs.obj" "code\tivaware\src\cpu.obj" "code\tivaware\src\gpio.obj" "code\tivaware\src\interrupt.obj" "code\tivaware\src\ssi.obj" "code\tivaware\src\sysctl.obj" "code\tivaware\src\timer.obj" "code\tivaware\src\uart.obj" "code\templates\src\C_SOURCE_TEMPLATE.obj" "code\main.obj" "code\author\src\ektm4c123gxl.obj" "code\author\src\functions_gpio.obj" "code\author\src\functions_spi.obj" "code\author\src\functions_tim.obj" "code\author\src\functions_uart.obj" "code\author\src\mfrc522.obj" 
 	-@echo 'Finished clean'
 	-@echo ' '
 

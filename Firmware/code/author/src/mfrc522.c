@@ -73,6 +73,9 @@ typedef enum
 {
     MFCommand_ReqA = 0x26,
     MFCommand_WupA = 0x52,
+    MFCommand_SelCL1 = 0x93,
+    MFCommand_SelCL2 = 0x95,
+    MFCommand_SelCL3 = 0x97,
 } mfrc522_MFCommand;
 
 /* Private define ------------------------------------------------------------*/
@@ -106,6 +109,8 @@ typedef enum
 #define MFRC522_ADDR_TXASK			(0x15)
 #define MFRC522_ADDR_DEMOD          (0x19)
 #define MFRC522_ADDR_MFRX			(0x1D)
+#define MFRC522_ADDR_CRCRESULTMSB   (0x21)
+#define MFRC522_ADDR_CRCRESULTLSB   (0x22)
 #define MFRC522_ADDR_RFCFG			(0x26)
 #define MFRC522_ADDR_TMODE          (0x2A)
 #define MFRC522_ADDR_TPRESCALERLO   (0x2B)
@@ -308,6 +313,12 @@ typedef enum
 #define MFRC522_STATUS_IRQ_ON			(0x10)
 #define MFRC522_STATUS_TIMER_ON			(0x20)
 
+#define MFRC522_CRC_MSBFIRST         (0x01)
+#define MFRC522_CRC_PRESET_0000      (0x02)
+#define MFRC522_CRC_PRESET_6363      (0x04)
+#define MFRC522_CRC_PRESET_A671      (0x08)
+#define MFRC522_CRC_PRESET_FFFF      (0x10)
+
 /* Private macro -------------------------------------------------------------*/
 #define BIT(n)          (1 << (n))
 #define BITS(x, n)      ((x) << (n))
@@ -355,6 +366,17 @@ static void mfrc522_TransmitterSetFrame (mfrc522_Class* class, mfrc522_Frame fra
 static uint8_t mfrc522_CommandTransceive (mfrc522_Class* class, uint8_t* TxData, uint8_t TxDataLength, uint8_t* RxData, uint8_t* RxDataLength);
 static uint8_t mfrc522_ReceiverGetBits (mfrc522_Class* class);
 static uint8_t mfrc522_ReceiverGetCollision (mfrc522_Class* class);
+static void mfrc522_CRCConfig (mfrc522_Class* class, uint8_t MFRC522_CRCx);
+static uint8_t mfrc522_StatusGet (mfrc522_Class* class);
+static void mfrc522_ReceiverCRCStatus (mfrc522_Class* class, uint8_t MFRC522_STATUSx);
+static mfrc522_Speed mfrc522_ReceiverGetSpeed (mfrc522_Class* class);
+static void mfrc522_ReceiverSetSpeed (mfrc522_Class* class, mfrc522_Speed speed);
+static uint8_t mfrc522_ReceiverGetCollision (mfrc522_Class* class);
+static uint8_t mfrc522_ReceiverGetBits (mfrc522_Class* class);
+static void mfrc522_ReceiverContinous (mfrc522_Class* class, uint8_t MFRC522_STATUSx);
+static void mfrc522_ReceiverIgnoreInvalid (mfrc522_Class* class, uint8_t MFRC522_STATUSx);
+static void mfrc522_ReceiverAntennaGain (mfrc522_Class* class, uint8_t MFRC522_RXGAINx);
+static void mfrc522_CRCCalculate (mfrc522_Class* class, uint8_t* data, uint8_t dataLength, uint8_t* recv);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -567,6 +589,7 @@ static uint8_t mfrc522_CommandTransceive (mfrc522_Class* class, uint8_t* TxData,
 
     mfrc522_FIFOClear(class);
     mfrc522_FIFOWrite(class, TxData, TxDataLength);
+    mfrc522_ReceiverStatus(class, MFRC522_STATUS_ON);
 
     mfrc522_CommandExecute(class, Command_Transceive);
     mfrc522_TransmitterStart(class);
@@ -592,8 +615,11 @@ static uint8_t mfrc522_CommandTransceive (mfrc522_Class* class, uint8_t* TxData,
 
 static uint8_t mfrc522_FindTags (mfrc522_Class* class)
 {
-    uint8_t data[10] = {0xFF};
+    uint8_t data[64] = {0xFF};
     uint8_t RxDataLength = 0;
+    uint8_t result;
+    uint8_t RxValidBits;
+    uint16_t CRCResult = 0;
 
     mfrc522_SoftReset(class);
 
@@ -601,25 +627,73 @@ static uint8_t mfrc522_FindTags (mfrc522_Class* class)
     mfrc522_TimerConfig(class, MFRC522_TIMER_OPT_AUTO);
     mfrc522_TimerValues(class, 500, 677);
 
-    // Configure Antenna and receiver.
+    // Configure Antenna and CRC.
     mfrc522_TransmitterModulation100ASK(class, MFRC522_STATUS_ON);
-    mfrc522_ReceiverStatus(class, MFRC522_STATUS_ON);
+    mfrc522_CRCConfig(class, MFRC522_CRC_PRESET_6363);
+    mfrc522_TransmitterCrcStatus(class, MFRC522_STATUS_OFF);
+    mfrc522_ReceiverCRCStatus(class, MFRC522_STATUS_OFF);
     mfrc522_AntennaConfig(class, MFRC522_ANTENNA_OPT_TX2_INVERTED_WHEN_ON | MFRC522_ANTENNA_OPT_TX1_MODULATED | MFRC522_ANTENNA_OPT_TX2_MODULATED);
 
     // Configure for short frame and initialization.
     mfrc522_TransmitterSetFrame(class, Frame_Short);
-    mfrc522_TransmitterSpeedSet(class, Speed_106kBd);
 
     data[0] = MFCommand_ReqA;
 
-    return mfrc522_CommandTransceive(class, data, 1, data, &RxDataLength);
+    // REQA
+    result = mfrc522_CommandTransceive(class, data, 1, data, &RxDataLength);
+
+    if (result == MFRC522_STATUS_ON)
+    {
+    	// Get UIDCLn for Single Size
+        data[0] = MFCommand_SelCL1;
+        data[1] = 0x20;
+        mfrc522_TransmitterSetFrame(class, Frame_Standard);
+        result = mfrc522_CommandTransceive(class, data, 2, (data + 2), &RxDataLength);
+
+        if (result == MFRC522_STATUS_ON)
+        {
+        	// Send UIDCL to get SAK.
+            data[0] = MFCommand_SelCL1;
+            data[1] = 0x70;
+            mfrc522_CRCCalculate(class, data, 7, data + 7);
+            result = mfrc522_CommandTransceive(class, data, 9, data, &RxDataLength);
+
+            if (result == MFRC522_STATUS_ON)
+            {
+                data[20] = 0x00;
+            }
+        }
+    }
+
+    return result;
+}
+
+/*
+ * Calculates the CRC.
+ */
+
+static void mfrc522_CRCCalculate (mfrc522_Class* class, uint8_t* data, uint8_t dataLength, uint8_t* recv)
+{
+    uint8_t temp;
+
+    mfrc522_FIFOClear(class);
+    mfrc522_FIFOWrite(class, data, dataLength);
+    mfrc522_IntClear(class, MFRC522_INT_CRC);
+    mfrc522_CommandExecute(class, Command_CalcCrc);
+    while (!(mfrc522_IntGet(class) & MFRC522_INT_CRC));
+    mfrc522_CommandExecute(class, Command_Idle);
+
+    mfrc522_ReadRegister(class, MFRC522_ADDR_CRCRESULTLSB, &temp);
+    recv[0] = temp;
+    mfrc522_ReadRegister(class, MFRC522_ADDR_CRCRESULTMSB, &temp);
+    recv[1] = temp;
 }
 
 /*
  * Configures the CRC.
  */
 
-status void mfrc522_CRCConfig (mfrc522_Class* class, uint8_t MFRC522_CRCx)
+static void mfrc522_CRCConfig (mfrc522_Class* class, uint8_t MFRC522_CRCx)
 {
 	uint8_t temp;
 
@@ -640,7 +714,7 @@ status void mfrc522_CRCConfig (mfrc522_Class* class, uint8_t MFRC522_CRCx)
 	else if (MFRC522_CRCx & MFRC522_CRC_PRESET_FFFF)
 		temp |= MFRC522_BMS_MODE_CRCPRESET_FFFF;
 
-	mfrc522_WriteRegister(classs, MFRC522_ADDR_MODE, temp);
+	mfrc522_WriteRegister(class, MFRC522_ADDR_MODE, temp);
 }
 
 /*
@@ -842,11 +916,11 @@ static void mfrc522_TransmitterSetFrame (mfrc522_Class* class, mfrc522_Frame fra
     {
     case Frame_Short:
         mfrc522_TransmitterSetBits(class, 7);
-        mfrc522_ParityStatus(class, MFRC522_STATUS_OFF);
+        //mfrc522_ParityStatus(class, MFRC522_STATUS_OFF);
         break;
     case Frame_Standard:
-        mfrc522_TransmitterSetBits(class, 0);
-        mfrc522_ParityStatus(class, MFRC522_STATUS_ON);
+        mfrc522_TransmitterSetBits(class, 8);
+        //mfrc522_ParityStatus(class, MFRC522_STATUS_ON);
         break;
     case Frame_Anticollision:
         break;
@@ -924,6 +998,7 @@ static void mfrc522_ReceiverStatus (mfrc522_Class* class, uint8_t MFRC522_STATUS
     uint8_t temp;
 
     mfrc522_ReadRegister(class, MFRC522_ADDR_COMMAND, &temp);
+    temp &= ~MFRC522_BMS_COMMAND_COMMAND_BITS;
     temp |= MFRC522_BMS_COMMAND_COMMAND_NOCMDCHANGE; // Add CMD NO CHANGE.
     (MFRC522_STATUSx == MFRC522_STATUS_ON) ? (temp &= ~(MFRC522_BMS_COMMAND_RCVOFF_BIT)) : (temp |= MFRC522_BMS_COMMAND_RCVOFF_BIT);
     mfrc522_WriteRegister(class, MFRC522_ADDR_COMMAND, temp);
@@ -1119,7 +1194,8 @@ static void mfrc522_TransmitterSetBits (mfrc522_Class* class, uint8_t nBits)
 
 	mfrc522_ReadRegister(class, MFRC522_ADDR_BITFRAMING, &temp);
 	temp &= ~(MFRC522_BMS_BITFRAMING_TXLASTBITS_BITS);
-	temp |= MFRC522_BMS_BITFRAMING_TXLASTBITS((nBits & 0x07));
+	if (nBits != 0x08)
+	    temp |= MFRC522_BMS_BITFRAMING_TXLASTBITS((nBits & 0x07));
 	mfrc522_WriteRegister(class, MFRC522_ADDR_BITFRAMING, temp);
 }
 
