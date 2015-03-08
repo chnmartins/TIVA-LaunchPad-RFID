@@ -206,6 +206,7 @@ typedef enum
 #define MFRC522_BMS_STATUS2_MODEMSTATE_RX_WAIT_RF			BITS(0x04, 0)
 #define MFRC522_BMS_STATUS2_MODEMSTATE_WAIT_FOR_DATA		BITS(0x05, 0)
 #define MFRC522_BMS_STATUS2_MODEMSTATE_RECEIVING			BITS(0x06, 0)
+#define MFRC522_BMS_STATUS2_MFCRYPTO1ON_BIT					BIT(3)
 
 #define	MFRC522_BMS_BITFRAMING_STARTSEND_BIT				 BIT(7)
 #define	MFRC522_BMS_BITFRAMING_RXALIGN_BITS				 	 BITS(0x07, 4)
@@ -312,6 +313,7 @@ typedef enum
 #define MFRC522_STATUS_FIFO_LOW			(0x08)
 #define MFRC522_STATUS_IRQ_ON			(0x10)
 #define MFRC522_STATUS_TIMER_ON			(0x20)
+#define MFRC522_STATUS_MFCRYPTO_ON		(0x40)
 
 #define MFRC522_CRC_MSBFIRST         (0x01)
 #define MFRC522_CRC_PRESET_0000      (0x02)
@@ -377,6 +379,7 @@ static void mfrc522_ReceiverContinous (mfrc522_Class* class, uint8_t MFRC522_STA
 static void mfrc522_ReceiverIgnoreInvalid (mfrc522_Class* class, uint8_t MFRC522_STATUSx);
 static void mfrc522_ReceiverAntennaGain (mfrc522_Class* class, uint8_t MFRC522_RXGAINx);
 static void mfrc522_CRCCalculate (mfrc522_Class* class, uint8_t* data, uint8_t dataLength, uint8_t* recv);
+static bool mfrc522_MFAuthenticate (mfrc522_Class* class, uint8_t blockAddress, uint8_t* keyData, uint8_t* UID);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -585,6 +588,8 @@ static uint8_t mfrc522_CommandTransceive (mfrc522_Class* class, uint8_t* TxData,
     uint8_t error = 0, result = MFRC522_STATUS_OFF;
     uint16_t flag = 0;
 
+    mfrc522_IntClear(class, MFRC522_INT_RX | MFRC522_INT_TIMER);
+
     *(RxDataLength) = 0;
 
     mfrc522_FIFOClear(class);
@@ -616,6 +621,7 @@ static uint8_t mfrc522_CommandTransceive (mfrc522_Class* class, uint8_t* TxData,
 static uint8_t mfrc522_FindTags (mfrc522_Class* class)
 {
     uint8_t data[64] = {0xFF};
+    uint8_t UID[5] = {0x00, 0x00};
     uint8_t RxDataLength = 0;
     uint8_t result;
     uint8_t RxValidBits;
@@ -648,24 +654,67 @@ static uint8_t mfrc522_FindTags (mfrc522_Class* class)
         data[0] = MFCommand_SelCL1;
         data[1] = 0x20;
         mfrc522_TransmitterSetFrame(class, Frame_Standard);
-        result = mfrc522_CommandTransceive(class, data, 2, (data + 2), &RxDataLength);
+        result = mfrc522_CommandTransceive(class, data, 2, UID, &RxDataLength);
 
         if (result == MFRC522_STATUS_ON)
         {
         	// Send UIDCL to get SAK.
             data[0] = MFCommand_SelCL1;
             data[1] = 0x70;
+            data[2] = UID[0], data[3] = UID[1], data[4] = UID[2], data[5] = UID[3], data[6] = UID[4];
             mfrc522_CRCCalculate(class, data, 7, data + 7);
             result = mfrc522_CommandTransceive(class, data, 9, data, &RxDataLength);
 
             if (result == MFRC522_STATUS_ON)
             {
-                data[20] = 0x00;
+            	// Lets authenticate the Mifare card
+            	uint8_t key[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+            	result = mfrc522_MFAuthenticate(class, 0x00, key, UID);
+
+            	if (result == MFRC522_STATUS_ON)
+            	{
+            		data[0] = 0x30;
+            	}
             }
         }
     }
 
     return result;
+}
+
+/*
+ *
+ */
+
+static bool mfrc522_MFAuthenticate (mfrc522_Class* class, uint8_t blockAddress, uint8_t* keyData, uint8_t* UID)
+{
+	uint8_t data[12] = {0x60, blockAddress, keyData[0], keyData[1], keyData[2], keyData[3], keyData[4], keyData[5], UID[0], UID[1], UID[2], UID[3]};
+	uint8_t error, flags, status, temp;
+
+	// Clear the Crypto.
+	mfrc522_ReadRegister(class, MFRC522_ADDR_STATUS2, &temp);
+	temp &= ~(MFRC522_BMS_STATUS2_MFCRYPTO1ON_BIT);
+	mfrc522_WriteRegister(class, MFRC522_ADDR_STATUS2, temp);
+
+	mfrc522_FIFOClear(class);
+	mfrc522_FIFOWrite(class, data, 12);
+
+	mfrc522_IntClear(class, MFRC522_INT_IDLE);
+	mfrc522_IntClear(class, MFRC522_INT_TIMER);
+
+	mfrc522_CommandExecute(class, Command_MFAuthent);
+
+	do
+	{
+		error = mfrc522_ErrorGet(class) & MFRC522_ERROR_PROTOCOL;
+		flags = mfrc522_IntGet(class) & (MFRC522_INT_IDLE | MFRC522_INT_TIMER);
+		status = mfrc522_StatusGet(class) & MFRC522_STATUS_MFCRYPTO_ON;
+	} while ((!(error)) && (!(flags)) && (!(status)));
+	mfrc522_CommandExecute(class, Command_Idle);
+
+	if (error || (flags & MFRC522_INT_TIMER))
+		return false;
+	return true;
 }
 
 /*
@@ -739,6 +788,10 @@ static uint8_t mfrc522_StatusGet (mfrc522_Class* class)
 		result |= MFRC522_STATUS_FIFO_HIGH;
 	if (temp & MFRC522_BMS_STATUS1_LOALERT_BIT)
 		result |= MFRC522_STATUS_FIFO_LOW;
+
+	mfrc522_ReadRegister(class, MFRC522_ADDR_STATUS2, &temp);
+	if (temp & MFRC522_BMS_STATUS2_MFCRYPTO1ON_BIT)
+		result |= MFRC522_STATUS_MFCRYPTO_ON;
 
 	return result;
 }
@@ -916,11 +969,9 @@ static void mfrc522_TransmitterSetFrame (mfrc522_Class* class, mfrc522_Frame fra
     {
     case Frame_Short:
         mfrc522_TransmitterSetBits(class, 7);
-        //mfrc522_ParityStatus(class, MFRC522_STATUS_OFF);
         break;
     case Frame_Standard:
         mfrc522_TransmitterSetBits(class, 8);
-        //mfrc522_ParityStatus(class, MFRC522_STATUS_ON);
         break;
     case Frame_Anticollision:
         break;

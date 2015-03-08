@@ -76,7 +76,7 @@ int main (void)
 
     board->mfrc522Class->Init(board->mfrc522Class);
     if (board->mfrc522Class->SelfTest(board->mfrc522Class) == MFRC522_STATUS_ON)
-        board->UART_SendString(EKTM4C123GXL_UART_DBG, "RFID SelfTest succesful.\r\n");
+        board->UART_SendString(EKTM4C123GXL_UART_DBG, "RFID SelfTest succesful.\r\n"), board->LED_On(EKTM4C123GXL_LEDG);
     else
         board->UART_SendString(EKTM4C123GXL_UART_DBG, "RFID SelfTest failed.\r\n");
 
