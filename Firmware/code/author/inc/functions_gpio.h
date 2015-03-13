@@ -1,14 +1,19 @@
 /**
   ******************************************************************************
-  * @file    C_HEADER_TEMPLATE.h
-  * @author  Header template author and its contact email
-  * @version Version 1 Issue 1
-  * @date    Date when the file was released.	(i.e. 05-March-2014)
-  * @brief   Short description about the header template.
+  * @file    functions_gpio.h
+  * @author  Diego Martínez García "dmartinezgarcia@outlook.com"
+  * @date    08-March-2015
+  * @brief   Header file for GPIO functions file.
   ******************************************************************************
-  * @attention
+  * @copyright
+  *		
+  *		functions_gpio.h, GPIO functions for TM4C microcontrollers. Copyright (C) 2015  Diego Martínez García @ dmartinezgarcia@outlook.com.
   *
-  *		Copyright Information (C)
+  *		This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+  *
+  *  	This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+  *
+  * 	You should have received a copy of the GNU General Public License along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   ******************************************************************************
   */
